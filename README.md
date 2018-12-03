@@ -1,7 +1,7 @@
 # dusty-boring-bootstrap
 elastic job with springboot 
 
-##目录
+## 目录
 - [1.简介](#1.简介)
 - [2.功能列表](#2.功能列表：)
 - [3.使用说明](#3.使用说明)
