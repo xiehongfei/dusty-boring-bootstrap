@@ -1,0 +1,2 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+com.dusty.boring.elastic.core.autoconfigure.AnnoOfSimpleJobAutoConfiguration

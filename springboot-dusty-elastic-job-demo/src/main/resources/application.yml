@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: dusty-boring-elastic-job-demo
+server:
+  port: 8080
+
+#~~ Elastic Job 配置BEGIN ~~
+dusty:
+  elasticjob:
+    enabled-bean-mode: true #启用Bean作业解析
+    zk:
+      servers: 172.16.151.33:2181,172.16.151.34:2181,172.16.151.35:2181
+      namespace: ${spring.application.name}
+    sxp-simple-jobs:
+      - job-class: ElasticSimpleJob
+        corn: 0/30 * * * * ?
+        shardingTotalCount: 1
+        shardingItemParameters: 1=wechat
+#~~ Elastic Job 配置END ~~
