@@ -24,9 +24,9 @@ elastic job with springboot
  - 支持基于注解@ElasticJob方式自动注册ElasticJob任务；
  - 代码结构中的Apache Curator 暂未完全集成，不影响1.2功能使用；
 
-##3.使用说明
-####- 3.1.基于JavaBean的使用方法
-> ###### 3.1.1.继承SimpleJob接口；
+## 3.使用说明
+#### - 3.1.基于JavaBean的使用方法
+> 3.1.1.继承SimpleJob接口；
 ```java
 /**
  * <pre>
@@ -80,7 +80,7 @@ public class ElasticSimpleJob implements SimpleJob {
 }
 ```
 
->###### 3.1.2.配置文件启用JavaBean方式
+> 3.1.2.配置文件启用JavaBean方式
 ```yaml
 dusty:
   elasticjob:
@@ -96,8 +96,8 @@ dusty:
 ```
 ###### 3.1.3.集成完成（DONE）。
 
-####- 3.2.基于注解的使用方法
-> ###### 3.2.1.配置文件application.yml
+#### - 3.2.基于注解的使用方法
+> 3.2.1.配置文件application.yml
 ```yaml
 #~~ Elastic Job 配置BEGIN ~~
 dusty:
@@ -113,7 +113,7 @@ dusty:
         shardingItemParameters: 1=wechat
 #~~ Elastic Job 配置END ~~
 ```
-> ######3.2.2.任务类添加@Elastic注解
+> 3.2.2.任务类添加@Elastic注解
 ```java
 @Slf4j
 @ElasticJob(jobName = "ElasticJobAnnotationJobDemoScheduler",
@@ -149,6 +149,6 @@ public class ElasticJobAnnotationJobDemo implements SimpleJob {
     }
 }
 ```
-> ######3.2.3.完成集成（DONE）。
+> 3.2.3.完成集成（DONE）。
 
 
