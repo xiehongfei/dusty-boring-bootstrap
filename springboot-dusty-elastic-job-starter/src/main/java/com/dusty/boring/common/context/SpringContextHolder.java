@@ -1,6 +1,8 @@
 package com.dusty.boring.common.context;
 
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.env.Environment;
+
 import java.lang.annotation.Annotation;
 import java.util.Map;
 
@@ -66,8 +68,9 @@ public class SpringContextHolder {
      * </pre>
      */
     public static String getActiveProfile() {
-        
-        return applicationContext.getEnvironment().getActiveProfiles()[0];
+    
+        Environment env = applicationContext.getEnvironment();
+        return env.getActiveProfiles().length == 0 ? env.getDefaultProfiles()[0] : env.getActiveProfiles()[0];
     }
     
 //    /**

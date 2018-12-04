@@ -11,6 +11,7 @@ package com.dusty.boring.elastic.core.autoconfigure;
 import com.dangdang.ddframe.job.reg.zookeeper.ZookeeperConfiguration;
 import com.dangdang.ddframe.job.reg.zookeeper.ZookeeperRegistryCenter;
 import com.dusty.boring.common.constants.StringPool;
+import com.dusty.boring.elastic.core.initail.SpringContextHoderInitalizer;
 import com.dusty.boring.elastic.core.process.ElasticJobAnnotationProcessor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -81,6 +82,12 @@ public class AnnoOfSimpleJobAutoConfiguration {
     @ConditionalOnBean(ZookeeperConfiguration.class)
     public ZookeeperRegistryCenter zookeeperRegistryCenter(ZookeeperConfiguration zkConfiguration) {
         return new ZookeeperRegistryCenter(zkConfiguration);
+    }
+    
+    @Bean
+    @ConditionalOnMissingBean
+    public SpringContextHoderInitalizer springContextHoderInitalizer() {
+        return new SpringContextHoderInitalizer();
     }
     
     

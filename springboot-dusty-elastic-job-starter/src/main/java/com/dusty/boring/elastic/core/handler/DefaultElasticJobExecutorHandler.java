@@ -1,8 +1,8 @@
 package com.dusty.boring.elastic.core.handler;
 
 import com.dangdang.ddframe.job.executor.handler.ExecutorServiceHandler;
+import com.dusty.boring.common.utils.ThreadUtils;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.suixingpay.stageloan.marketing.common.support.utils.ThreadUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.ExecutorService;
