@@ -43,7 +43,7 @@ public final class ElasticLiteJobBeansProcessor {
         ZookeeperRegistryCenter zookRegCenter = SpringContextHolder.getBean(ZookeeperRegistryCenter.class);
         
         //~~ 获取DustyElasticJob配置 ~~
-        Map<String, ElasticJobProperties.SxpSimpleJob> simpleJobMap = elasticJobProperties.getCachedSimpleJobParams();
+        Map<String, ElasticJobProperties.DustySimpleJob> simpleJobMap = elasticJobProperties.getCachedSimpleJobParams();
         
         //~~ 获取继承自SimpleJob的Bean ~~
         Map<String, SimpleJob> simpleJobBeans = SpringContextHolder.getBeansOfType(SimpleJob.class);
@@ -57,7 +57,7 @@ public final class ElasticLiteJobBeansProcessor {
             }
             
             String className = job.getClass().getSimpleName();
-            ElasticJobProperties.SxpSimpleJob prop = simpleJobMap.get(className);
+            ElasticJobProperties.DustySimpleJob prop = simpleJobMap.get(className);
             Assert.notNull(prop, "SimpleJob参数为空，无法实例化Job");
             
             //~~ Elastic Lite Job 相关处理 Begin ~~

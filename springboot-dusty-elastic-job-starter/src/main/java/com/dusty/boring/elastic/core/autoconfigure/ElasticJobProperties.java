@@ -24,19 +24,19 @@ import java.util.Map;
 @ConfigurationProperties(prefix = "dusty.elasticjob")
 public class ElasticJobProperties {
     
-    private static Map<String, SxpSimpleJob> cachedProperties;
+    private static Map<String, DustySimpleJob> cachedProperties;
     
     @MetaData(value = "是否启用bean加载elastic job", note = "默认false,为true时开启处理SimpleJob且未注解@ElasticJob的子类")
     private boolean enabledBeanMode = false;
     
     @MetaData(value = "simpleJob分片参数")
-    private List<SxpSimpleJob> sxpSimpleJobs;
+    private List<DustySimpleJob> dustySimpleJobs;
     
     @MetaData(value = "dataFlowJob分片参数")
-    private List<SxpDataFlowJob> sxpDataFlowJobs;
+    private List<DustyDataFlowJob> dustyDataFlowJobs;
     
     @MetaData(value = "scriptJob分片参数")
-    private List<SxpScriptJob> sxpScriptJobs;
+    private List<DustyScriptJob> dustyScriptJobs;
     
     /**
      * <pre>
@@ -45,14 +45,14 @@ public class ElasticJobProperties {
      * @return 配置map
      * </pre>
      */
-    public Map<String, SxpSimpleJob> getCachedSimpleJobParams() {
+    public Map<String, DustySimpleJob> getCachedSimpleJobParams() {
         
-        if (null == this.sxpSimpleJobs)
+        if (null == this.dustySimpleJobs)
             return Maps.newHashMap();
         
         if (null == cachedProperties) {
             cachedProperties = Maps.newHashMap();
-            for (SxpSimpleJob simpleJob : sxpSimpleJobs) {
+            for (DustySimpleJob simpleJob : dustySimpleJobs) {
                 cachedProperties.put(simpleJob.getJobClass(), simpleJob);
             }
         }
@@ -67,7 +67,7 @@ public class ElasticJobProperties {
      */
     @Getter
     @Setter
-    public static class SxpSimpleJob {
+    public static class DustySimpleJob {
         
         @MetaData(value = "本地Class名称")
         private String jobClass;
@@ -90,7 +90,7 @@ public class ElasticJobProperties {
      */
     @Getter
     @Setter
-    public static class SxpDataFlowJob {
+    public static class DustyDataFlowJob {
     
         @MetaData(value = "本地Class名称")
         private String jobClass;
@@ -113,7 +113,7 @@ public class ElasticJobProperties {
      */
     @Getter
     @Setter
-    public static class SxpScriptJob {
+    public static class DustyScriptJob {
     
     }
     
