@@ -86,9 +86,9 @@ dusty:
   elasticjob:
     enabled-bean-mode: true #启用Bean作业解析
     zk:
-      servers: 172.16.151.33:2181,172.16.151.34:2181,172.16.151.35:2181
+      servers: localhost:2181 #如多个注册中心，可localhost:2181,host1:2181,host2:2181
       namespace: ${spring.application.name}
-    sxp-simple-jobs:
+    dusty-simple-jobs:
       - job-class: ElasticSimpleJob
         corn: 0/30 * * * * ?
         shardingTotalCount: 1
@@ -104,9 +104,9 @@ dusty:
   elasticjob:
     enabled-bean-mode: false #禁用Bean作业解析
     zk:
-      servers: 172.16.151.33:2181,172.16.151.34:2181,172.16.151.35:2181
+      servers: localhost:2181 #如多个注册中心，可localhost:2181,host1:2181,host2:2181
       namespace: ${spring.application.name}
-    sxp-simple-jobs:
+    dusty-simple-jobs:
       - job-class: ElasticSimpleJob
         corn: 0/30 * * * * ?
         shardingTotalCount: 1
