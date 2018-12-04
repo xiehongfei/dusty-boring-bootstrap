@@ -20,7 +20,7 @@ import org.springframework.context.annotation.Scope;
  * </pre>
  */
 @Configuration
-@ConditionalOnProperty(value = "suixingpay.elasticjob.enabled-bean-mode", havingValue = "true")
+@ConditionalOnProperty(value = "dusty.elasticjob.enabled-bean-mode", havingValue = "true")
 @EnableConfigurationProperties(ElasticJobProperties.class)
 public class BeansOfSimpleJobAutoConfiguration {
     

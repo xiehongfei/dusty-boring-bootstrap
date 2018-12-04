@@ -27,10 +27,10 @@ public interface StringPool {
     String DONT_VISIT_JOB_LISTENER = "com.suixingpay.stageloan.marketing.quartz.biz.listener.WarningUserFollowDontVisitListener";
     
     @MetaData(value = "默认ElasticJobExceptionHandler类全限定名")
-    String DEFAULT_JOB_EXCEPTION_HANDLER_CLASS = "com.suixingpay.stageloan.marketing.quartz.core.elasticjob.handler.DefaultElasticJobExceptionHandler";
+    String DEFAULT_JOB_EXCEPTION_HANDLER_CLASS = "com.dusty.boring.elastic.core.handler.DefaultElasticJobExceptionHandler";
     
     @MetaData(value = "默认ElasticJobExecutorHandler类全限定名")
-    String DEFAULT_JOB_EXECUTOR_HANDLER_CLASS = "com.suixingpay.stageloan.marketing.quartz.core.elasticjob.handler.DefaultElasticJobExecutorHandler";
+    String DEFAULT_JOB_EXECUTOR_HANDLER_CLASS = "com.dusty.boring.elastic.core.handler.DefaultElasticJobExecutorHandler";
     
     @MetaData(value = "默认任务分片策略类全限定名")
     String DEFAULT_JOB_STRATEGY_CLASS = "com.dangdang.ddframe.job.lite.api.strategy.impl.AverageAllocationJobShardingStrategy";

@@ -28,7 +28,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @ElasticJob(jobName = "ElasticJobAnnotationJobDemoScheduler",
         jobType = JobType.SIMPLE,
-        corn = "0 0/6 * * * ?", //6分钟执行一次
+        corn = "0/10 * * * * ?", //6分钟执行一次
         shardingTotalCount = 1,
         shardingItemParameters = "0=all")
 @Component
