@@ -152,3 +152,24 @@ public class ElasticJobAnnotationJobDemo implements SimpleJob {
 > 3.2.3.完成集成（DONE）。
 
 
+## 4.运维平台
+
+#### 4.1.运维平台部署
+> 访问 elastic job官网 [运维平台部署指南](http://elasticjob.io/docs/elastic-job-lite/01-start/deploy-guide/)，可通过github.com下载elastic-lite-console本地部署。
+
+#### 4.2.运维平台配置
+
+> 4.2.1.配置注册中心
+
+![elastic-lite-console 注册中心配置](https://raw.githubusercontent.com/xiehongfei/dusty-boring-bootstrap/master/springboot-dusty-elastic-job-demo/src/main/resources/statics/images/elasticjob-console%E9%85%8D%E7%BD%AE%E4%B8%AD%E5%BF%83.png)
+
+
+![elastic-lite-console 注册中心列表](https://raw.githubusercontent.com/xiehongfei/dusty-boring-bootstrap/master/springboot-dusty-elastic-job-demo/src/main/resources/statics/images/elasticjob-console%E9%85%8D%E7%BD%AE%E4%B8%AD%E5%BF%83-%E9%85%8D%E7%BD%AE%E6%88%90%E5%8A%9F.png)
+
+
+> 4.2.2.查询任务（作业）信息
+
+![elastic-lite-console 任务列表](https://raw.githubusercontent.com/xiehongfei/dusty-boring-bootstrap/master/springboot-dusty-elastic-job-demo/src/main/resources/statics/images/elasticjob-console%E5%8F%B0%E4%BB%BB%E5%8A%A1%E7%8A%B6%E6%80%81.png)
+
+
+![elastic-lite-console 任务详情](https://raw.githubusercontent.com/xiehongfei/dusty-boring-bootstrap/master/springboot-dusty-elastic-job-demo/src/main/resources/statics/images/elasticjob-%E4%BD%9C%E4%B8%9A%E8%AF%A6%E6%83%85.png)
