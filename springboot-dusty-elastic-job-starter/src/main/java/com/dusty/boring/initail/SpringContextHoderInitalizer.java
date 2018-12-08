@@ -1,4 +1,4 @@
-package com.dusty.boring.elastic.core.initail;
+package com.dusty.boring.initail;
 
 import com.dusty.boring.common.context.SpringContextHolder;
 import lombok.extern.slf4j.Slf4j;
