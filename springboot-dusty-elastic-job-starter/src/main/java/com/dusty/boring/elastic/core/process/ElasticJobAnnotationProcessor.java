@@ -5,10 +5,13 @@ import com.dangdang.ddframe.job.config.dataflow.DataflowJobConfiguration;
 import com.dangdang.ddframe.job.config.simple.SimpleJobConfiguration;
 import com.dangdang.ddframe.job.executor.handler.JobProperties;
 import com.dangdang.ddframe.job.lite.config.LiteJobConfiguration;
+import com.dangdang.ddframe.job.lite.internal.schedule.LiteJob;
 import com.dangdang.ddframe.job.lite.spring.api.SpringJobScheduler;
 import com.dusty.boring.common.constants.StringPool;
 import com.dusty.boring.elastic.core.annotation.ElasticJob;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.text.WordUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
@@ -19,6 +22,7 @@ import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.ManagedList;
 import org.springframework.context.ApplicationContext;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 import java.util.EnumMap;
 import java.util.List;
@@ -80,6 +84,8 @@ public class ElasticJobAnnotationProcessor implements BeanPostProcessor {
         if (null == elasticJob)
             return bean;
         
+        
+    
         log.info("==== 开始处理ElasticJobBean-{},注册作业到作业调度中心。", bean.getClass().getCanonicalName());
         /** ~~~
          *  构造{@link JobCoreConfiguration} BeanDefinition 信息
@@ -87,6 +93,7 @@ public class ElasticJobAnnotationProcessor implements BeanPostProcessor {
          */
         BeanDefinition jobCoreConfigBean = buildElasticJobCoreBeanDefinition(elasticJob);
         BeanDefinition jobWithinTypeBean;
+        DefaultListableBeanFactory beanFactory = (DefaultListableBeanFactory) this.applicationContext.getAutowireCapableBeanFactory();
         switch (elasticJob.jobType()) {
             /**~~~
              * 构造{@link SimpleJobConfiguration} BeanDefinition信息
@@ -97,6 +104,18 @@ public class ElasticJobAnnotationProcessor implements BeanPostProcessor {
                 break;
                 
             case DATAFLOW:
+                
+                if (elasticJob.jobClass().trim().length() != 0) {
+                    
+                    BeanDefinitionBuilder actualJobBean = BeanDefinitionBuilder.rootBeanDefinition(elasticJob.jobClass());
+                    
+                    String actualJobBeanName = elasticJob.jobClass().substring(elasticJob.jobClass().lastIndexOf(".") + 1);
+                    beanName = WordUtils.uncapitalize(actualJobBeanName);
+                    
+                    beanFactory.registerBeanDefinition(beanName, actualJobBean.getBeanDefinition());
+                }
+                
+                
                 jobWithinTypeBean = buildDataFlowJobConfigurationBeanDefinition(elasticJob, jobCoreConfigBean, bean);
                 break;
                 
@@ -165,7 +184,7 @@ public class ElasticJobAnnotationProcessor implements BeanPostProcessor {
         //~~ 其它属性赋值 ~~
         springJobSchedulerBeanBuilder.setLazyInit(false);
     
-        DefaultListableBeanFactory beanFactory = (DefaultListableBeanFactory) this.applicationContext.getAutowireCapableBeanFactory();
+        
         String registerBeanName = String.format("%sJobScheduler", beanName);
         beanFactory.registerBeanDefinition(registerBeanName, springJobSchedulerBeanBuilder.getBeanDefinition());
         beanFactory.getBean(registerBeanName);
@@ -187,12 +206,13 @@ public class ElasticJobAnnotationProcessor implements BeanPostProcessor {
     private BeanDefinition buildDataFlowJobConfigurationBeanDefinition(ElasticJob elasticJob,
                                                                        BeanDefinition jobCoreConfigBean,
                                                                        Object bean) {
+        
         BeanDefinitionBuilder dataFlowJobConfigBeanBuilder
                 = BeanDefinitionBuilder.rootBeanDefinition(DataflowJobConfiguration.class);
         
         dataFlowJobConfigBeanBuilder.addConstructorArgValue(jobCoreConfigBean);
         
-        if (null == elasticJob.jobClass() || elasticJob.jobClass().trim().length() == 0) {
+        if (elasticJob.jobClass().trim().length() == 0) {
             //获取所传类从java语言规范定义的格式输出
             dataFlowJobConfigBeanBuilder.addConstructorArgValue(bean.getClass().getCanonicalName());
         } else {
@@ -200,8 +220,8 @@ public class ElasticJobAnnotationProcessor implements BeanPostProcessor {
         }
         
         dataFlowJobConfigBeanBuilder.addConstructorArgValue(true);
-        
-        throw new UnsupportedOperationException("暂不支持 Elastic Cloud Job Mode， 敬请期待。");
+        return dataFlowJobConfigBeanBuilder.getBeanDefinition();
+        //throw new UnsupportedOperationException("暂不支持 Elastic Cloud Job Mode， 敬请期待。");
     }
     
     /**
@@ -221,7 +241,7 @@ public class ElasticJobAnnotationProcessor implements BeanPostProcessor {
         
         BeanDefinitionBuilder simpleJobConfigBeanBuilder = BeanDefinitionBuilder.rootBeanDefinition(SimpleJobConfiguration.class);
         simpleJobConfigBeanBuilder.addConstructorArgValue(jobCoreConfigBean);
-        if (null == elasticJob.jobClass() || elasticJob.jobClass().trim().length() == 0) {
+        if (elasticJob.jobClass().trim().length() == 0) {
             //获取所传类从java语言规范定义的格式输出
             simpleJobConfigBeanBuilder.addConstructorArgValue(bean.getClass().getCanonicalName());
         } else {
@@ -247,7 +267,7 @@ public class ElasticJobAnnotationProcessor implements BeanPostProcessor {
         
         //~~ 构造 JobProperties BeanDefinition ~~
         BeanDefinitionBuilder elasticJobPropertiesBeanBuilder = BeanDefinitionBuilder.rootBeanDefinition(JobProperties.class);
-        EnumMap map = new EnumMap(JobProperties.JobPropertiesEnum.class);
+        EnumMap<JobProperties.JobPropertiesEnum, String> map = new EnumMap(JobProperties.JobPropertiesEnum.class);
         map.put(JobProperties.JobPropertiesEnum.EXECUTOR_SERVICE_HANDLER, elasticJob.executorServiceHandler());
         map.put(JobProperties.JobPropertiesEnum.JOB_EXCEPTION_HANDLER, elasticJob.jobExceptionHandler());
         //~~ EnumMap写入JopProperties BeanDefinition ~~

@@ -3,7 +3,7 @@ package com.dusty.boring.elastic.core.autoconfigure;
 import com.dangdang.ddframe.job.reg.zookeeper.ZookeeperConfiguration;
 import com.dangdang.ddframe.job.reg.zookeeper.ZookeeperRegistryCenter;
 import com.dusty.boring.common.constants.StringPool;
-import com.dusty.boring.elastic.core.initail.SpringContextHoderInitalizer;
+import com.dusty.boring.initail.SpringContextHoderInitalizer;
 import com.dusty.boring.elastic.core.process.ElasticJobAnnotationProcessor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
