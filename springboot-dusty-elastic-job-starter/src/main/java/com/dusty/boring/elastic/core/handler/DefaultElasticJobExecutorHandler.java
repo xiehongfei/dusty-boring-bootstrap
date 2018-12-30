@@ -2,6 +2,7 @@ package com.dusty.boring.elastic.core.handler;
 
 import com.dangdang.ddframe.job.executor.handler.ExecutorServiceHandler;
 import com.dusty.boring.common.utils.ThreadUtils;
+import com.dusty.boring.elastic.core.threas.NamedThreadFactory;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.extern.slf4j.Slf4j;
 
