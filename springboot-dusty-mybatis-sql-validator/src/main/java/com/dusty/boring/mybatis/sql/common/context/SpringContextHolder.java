@@ -1,10 +1,15 @@
 package com.dusty.boring.mybatis.sql.common.context;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.util.Assert;
 
 import java.lang.annotation.Annotation;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * <pre>
@@ -14,6 +19,10 @@ import java.util.Map;
  * </pre>
  */
 public class SpringContextHolder {
+    
+    private SpringContextHolder() {
+        //私有构造
+    }
 
     private static String ENV;
     
@@ -145,6 +154,22 @@ public class SpringContextHolder {
      */
     public static boolean isTestMode() {
         return "test".equalsIgnoreCase(getActiveProfile());
+    }
+    
+    
+    /**
+     * <pre>
+     *     获取BeanDeinitionRegistry
+     *
+     * @return BeanDeinitionRegistry实例
+     * </pre>
+     */
+    public static BeanDefinitionRegistry getBeanDeinitionRegistry() {
+        
+        Assert.notNull(applicationContext, "applicationContext获取失败!");
+        
+        ConfigurableApplicationContext configurableApplicationContext = (ConfigurableApplicationContext) applicationContext;
+        return (DefaultListableBeanFactory)configurableApplicationContext.getBeanFactory();
     }
     
 }
