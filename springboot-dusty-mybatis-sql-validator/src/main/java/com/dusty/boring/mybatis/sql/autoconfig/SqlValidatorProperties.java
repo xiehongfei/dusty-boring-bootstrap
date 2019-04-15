@@ -9,6 +9,7 @@
 package com.dusty.boring.mybatis.sql.autoconfig;
 
 import com.dusty.boring.mybatis.sql.common.annotation.MetaData;
+import com.google.common.collect.Lists;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -55,16 +56,16 @@ public class SqlValidatorProperties {
         private static final long serialVersionUID = -4461417917745401470L;
         
         @MetaData(value = "需要检查环境")
-        private List<String> needCheckEnvs = Arrays.asList("dev", "test", "rc");
+        private List<String> needCheckEnvs = Lists.newArrayList(Arrays.asList("dev", "test", "rc"));
         
         @MetaData(value = "跳过检查的环境")
-        private List<String> ignoreCheckEnvs = Collections.singletonList("prod");
+        private List<String> ignoreCheckEnvs = Lists.newArrayList(Collections.singletonList("prod"));
         
         @MetaData(value = "白名单启用环境")
-        private List<String> enableWhiteListCacheEnvs = Arrays.asList("dev", "test", "rc");
+        private List<String> enableWhiteListCacheEnvs = Lists.newArrayList(Arrays.asList("dev", "test", "rc"));
         
         @MetaData(value = "黑名单启用环境")
-        private List<String> enableBlackListCacheEnvs = Arrays.asList("dev", "test", "rc");
+        private List<String> enableBlackListCacheEnvs = Lists.newArrayList(Arrays.asList("dev", "test", "rc"));
     }
     
     @Getter
