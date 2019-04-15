@@ -9,6 +9,7 @@
 package com.dusty.boring.mybatis.sql.intercept;
 
 import com.dusty.boring.mybatis.sql.autoconfig.SqlValidatorProperties;
+import com.dusty.boring.mybatis.sql.common.annotation.IgnoreSqlChecker;
 import com.dusty.boring.mybatis.sql.common.annotation.MetaData;
 import com.dusty.boring.mybatis.sql.common.cache.LocalLRUCache;
 import com.dusty.boring.mybatis.sql.common.context.SpringContextHolder;
@@ -20,6 +21,7 @@ import com.dusty.boring.mybatis.sql.validater.SqlValidateProvider;
 import com.dusty.boring.mybatis.sql.validater.SqlValidateResult;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Booleans;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.schema.Table;
@@ -35,6 +37,7 @@ import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.reflection.SystemMetaObject;
 import org.springframework.util.Assert;
 
+import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -42,6 +45,7 @@ import java.sql.ResultSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool.*;
@@ -81,17 +85,21 @@ public class BadSqlValidateIntercepter implements Interceptor {
     @MetaData(value = "检查白名单", note = "已知可忽略检查的sql")
     public static LocalLRUCache<String, String> whiteSqlList;
     
+    @MetaData(value = "索引信息缓存")
+    public static LocalLRUCache<String, List<DbiData>> dbiDataList;
+    
     @MetaData(value = "检查黑名单", note = "已知未通过检查的sql")
     public static LocalLRUCache<String, SqlValidateResult> blackSqlList;
     
-    @MetaData(value = "索引信息缓存")
-    public static LocalLRUCache<String, List<DbiData>> dbiDataList;
+    @MetaData(value = "注解忽略检查的方法")
+    public static final Set<String> annotatedIgnoreMthds;
     
     static {
         
         blackSqlList = new LocalLRUCache<>(256);
         dbiDataList  = new LocalLRUCache<>(1024);
         whiteSqlList = new LocalLRUCache<>(1024);
+        annotatedIgnoreMthds = Sets.newConcurrentHashSet();
     }
     
     @Override
@@ -106,7 +114,7 @@ public class BadSqlValidateIntercepter implements Interceptor {
     
             //当前环境忽略检查
             if (ignoreEnvsValidate(sqlValidatorProperties)) {
-                invocation.proceed();
+                return invocation.proceed();
             }
     
             //当前系统配置忽略检查
@@ -114,7 +122,7 @@ public class BadSqlValidateIntercepter implements Interceptor {
             if (ZERO.equals(Booleans.countTrue(items.isEnableInCheck(), items.isEnableOrCheck(),
                                                items.isEnableLikeCheck(), items.isNotEqualCheck(),
                                                items.isEnableWhereCheck(),items.isEnableIndexCheck()))) {
-                invocation.proceed();
+                return invocation.proceed();
             }
             
             //准备sql校验资源
@@ -123,6 +131,11 @@ public class BadSqlValidateIntercepter implements Interceptor {
             final String dbTypeName         = metaData.getDatabaseProductName();
             MetaObject metaObject           = SystemMetaObject.forObject(getRealTarget(invocation.getTarget()));
             MappedStatement mappedStatement = (MappedStatement) metaObject.getValue(DELEGATE_MAPPED_STMT);
+    
+            //标注IgnoreSqlChecker
+            if (ignoreCheckByAnnotated(mappedStatement)) {
+                return invocation.proceed();
+            }
     
             BoundSql boundSql               = (BoundSql) metaObject.getValue(DELEGATE_BOUND_SQL);
             String   toExecSql              = boundSql.getSql();
@@ -133,7 +146,7 @@ public class BadSqlValidateIntercepter implements Interceptor {
             
             //检查sql白名单（包括已知通过校验的sql及已知标记‘IgnoreSqlChecker’忽略的sql）
             if (enabledEnvsWhiteList(sqlValidatorProperties) && whiteSqlList.containsKey(encryptedSql)) {
-                invocation.proceed();
+               return invocation.proceed();
             }
             
             //检查已知黑名单
@@ -146,15 +159,22 @@ public class BadSqlValidateIntercepter implements Interceptor {
                 }
             }
             
+            
+            
             //忽略检查INSERT语句
             if (SqlCommandType.INSERT.equals(mappedStatement.getSqlCommandType())) {
                 return invocation.proceed();
             }
+            
+            
     
             SqlValidateProvider sqlValidateProvider = getSqlValidateProvider(dbTypeName);
-            if (sqlValidateProvider.validateSql(toExecSql)) {
-                //验证通过
+            final SqlValidateResult validateResult = sqlValidateProvider.validateSqlWithResult(toExecSql, encryptedSql);
+            if (Objects.nonNull(validateResult) && validateResult.getViolations().size() > 0) {
+                //验证不通过
+                
             }
+    
     
         } finally {
             
@@ -170,8 +190,7 @@ public class BadSqlValidateIntercepter implements Interceptor {
             }
         }
         
-        
-        return null;
+        return invocation.proceed();
     }
     
     
@@ -224,6 +243,49 @@ public class BadSqlValidateIntercepter implements Interceptor {
      */
     private static boolean ignoreEnvsValidate(SqlValidatorProperties properties) {
         return properties.getEnvProfiles().getIgnoreCheckEnvs().contains(SpringContextHolder.getActiveProfile());
+    }
+    
+    /**
+     * <pre>
+     *     是否配置忽略检查
+     *
+     * @param  stmt MappedStatement
+     * @return bool
+     * </pre>
+     */
+    private static boolean ignoreCheckByAnnotated(MappedStatement stmt) throws ClassNotFoundException {
+        
+        final String id = stmt.getId();
+        
+        if (ANNOTATED_IGNORE_CHECK_METHODS.contains(id)) {
+            return true;
+        }
+        
+        if (NON_IGNORE_CHECK_METHODS.contains(id)) {
+            return false;
+        }
+        
+        //已知不忽略检查
+        final String stmtId = stmt.getId();
+        final String classNm  = StringUtils.substring(stmtId, 0, stmtId.lastIndexOf("."));
+        final String methodNm = StringUtils.substring(stmtId, stmtId.lastIndexOf(".") + 1, stmtId.length());
+        final Method[] methods = Class.forName(classNm).getMethods();
+        
+        for (Method m : methods) {
+            
+            if (methodNm.equals(m.getName())) {
+                if (m.isAnnotationPresent(IgnoreSqlChecker.class)) {
+                    //忽略SQL检查,代理类，无法获取方法注解
+                    ANNOTATED_IGNORE_CHECK_METHODS.add(stmtId);
+                } else {
+                    NON_IGNORE_CHECK_METHODS.add(stmtId);
+                }
+                
+                break;
+            }
+        }
+        
+        return ANNOTATED_IGNORE_CHECK_METHODS.contains(stmt.getId());
     }
     
     /**

@@ -9,9 +9,11 @@
 package com.dusty.boring.mybatis.sql.autoconfig;
 
 import com.dusty.boring.mybatis.sql.common.annotation.MetaData;
+import com.dusty.boring.mybatis.sql.common.context.SpringContextHolder;
 import com.google.common.collect.Lists;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -20,6 +22,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * <pre>
@@ -66,6 +69,15 @@ public class SqlValidatorProperties {
         
         @MetaData(value = "黑名单启用环境")
         private List<String> enableBlackListCacheEnvs = Lists.newArrayList(Arrays.asList("dev", "test", "rc"));
+        
+        public boolean enableBlackListCache() {
+            
+            if (Objects.isNull(enableBlackListCacheEnvs) || CollectionUtils.isEmpty(enableBlackListCacheEnvs)) {
+                return false;
+            }
+            
+            return enableBlackListCacheEnvs.contains(SpringContextHolder.getEnvironment());
+        }
     }
     
     @Getter

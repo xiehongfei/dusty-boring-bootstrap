@@ -8,19 +8,27 @@
  */
 package com.dusty.boring.mybatis.sql.validater;
 
+import com.alibaba.druid.sql.ast.SQLExpr;
+import com.alibaba.druid.sql.ast.SQLStatement;
+import com.alibaba.druid.sql.ast.statement.*;
+import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlSelectQueryBlock;
+import com.alibaba.druid.sql.dialect.mysql.parser.MySqlStatementParser;
+import com.alibaba.druid.sql.dialect.oracle.ast.stmt.OracleSelectQueryBlock;
+import com.alibaba.druid.sql.parser.SQLParserFeature;
 import com.dusty.boring.mybatis.sql.autoconfig.SqlValidatorProperties;
 import com.dusty.boring.mybatis.sql.common.annotation.MetaData;
+import com.dusty.boring.mybatis.sql.common.cache.LocalLRUCache;
 import com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool;
 import com.google.common.collect.Sets;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.util.Assert;
 
-import java.util.Collections;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool.ZERO;
+import static com.dusty.boring.mybatis.sql.common.pool.SqlErrorCode.SQL9000;
 import static com.dusty.boring.mybatis.sql.intercept.BadSqlValidateIntercepter.blackSqlList;
 import static com.dusty.boring.mybatis.sql.intercept.BadSqlValidateIntercepter.dbiDataList;
 import static com.dusty.boring.mybatis.sql.intercept.BadSqlValidateIntercepter.whiteSqlList;
@@ -60,20 +68,85 @@ public abstract class SqlValidateProvider {
      * <pre>
      *     检查合法性
      *
-     * @param   sql 带校验的sql语句
+     * @param   sql      带校验的sql语句
+     * @param   cacheKey 缓存key（sql语句清洗后加密内容）
      * @return  校验结果
      * </pre>
      */
-    public boolean validateSql(String sql) {
+    public boolean validateSql(String sql, String cacheKey) {
         
-        final SqlValidateResult result = validateInternal(sql);
+        final SqlValidateResult result = validateSqlWithResult(sql, cacheKey);
         return Objects.isNull(result) || ZERO.equals(result.getViolations().size());
     }
     
-    public SqlValidateResult validateInternal(String sql) {
+    public SqlValidateResult validateSqlWithResult(String sql, String cacheKey) {
+    
+        final MySqlStatementParser mySqlStatementParser
+                = new MySqlStatementParser(sql, SQLParserFeature.EnableSQLBinaryOpExprGroup, SQLParserFeature.StrictForWall);
+        final List<SQLStatement> sqlStatements = mySqlStatementParser.parseStatementList();
+        
+        Assert.isTrue(Objects.nonNull(sqlStatements) && sqlStatements.size() == 1, "sqlStatements size != 1");
         
         
+        SQLExpr where = null;
+        final SQLStatement sqlStatement = sqlStatements.get(0);
+        final SqlValidateResult forbidResult = forceForbidStatement(cacheKey, sql, sqlStatement);
+        if (Objects.nonNull(forbidResult)) {
+            return forbidResult;
+        } else if (sqlStatement instanceof SQLSelectStatement) {
+            //查询
+            final SQLSelectQuery sqlQuery = ((SQLSelectStatement) sqlStatement).getSelect().getQuery();
+            if (sqlQuery instanceof MySqlSelectQueryBlock) {
+                where = ((MySqlSelectQueryBlock) sqlQuery).getWhere();
+                ((MySqlSelectQueryBlock) sqlQuery).getLimit();
+            }
+            
+        } else if (sqlStatement instanceof SQLUpdateStatement) {
+            //更新
+            where = ((SQLUpdateStatement) sqlStatement).getWhere();
+        } else if (sqlStatement instanceof SQLDeleteStatement) {
+            //删除
+            where = ((SQLDeleteStatement) sqlStatement).getWhere();
+        }
+        
+        
+    
         return new SqlValidateResult(sql);
+    }
+    
+    /**
+     * <pre>
+     *     强制不可使用的命令
+     *
+     * @param   cacheKey     缓存Key
+     * @param   sql          sql语句
+     * @param   sqlStatement 待检查的stmt
+     * @return  bool
+     *            - true  : 禁止执行
+     *            - false : 允许执行
+     * </pre>
+     */
+    private SqlValidateResult forceForbidStatement(String cacheKey, String sql, SQLStatement sqlStatement) {
+        
+        Assert.notNull(sqlStatement, "SQLStatement不能为空!");
+        
+        boolean forbidSql =
+                   sqlStatement instanceof SQLCommentStatement
+                || sqlStatement instanceof SQLTruncateStatement //TRUNCATE: TRUNCATE TABLE用于删除表中的所有行，而不记录单个行删除操作
+                || sqlStatement instanceof SQLDropStatement;
+        
+        SqlValidateResult result = null;
+        
+        //是禁止执行的Sql，则加黑
+        if (forbidSql) {
+            SqlValidateResult.Violation violation
+                    = new SqlValidateResult.Violation(SQL9000.name(), SQL9000.getLabel());
+            
+            result  = new SqlValidateResult(sql, Collections.singletonList(violation));
+            addBlackSql(cacheKey, result);
+        }
+        
+        return result;
     }
     
     public Set<String> getWhiteSqlList() {
@@ -106,6 +179,36 @@ public abstract class SqlValidateProvider {
         }
         
         return Collections.unmodifiableSet(sqlSet);
+    }
+    
+    /**
+     * <pre>
+     *     增加黑名单Sql
+     *
+     * @param cacheKey          缓存Key
+     * @param sqlValidateResult 检查结果（加黑原因）
+     * </pre>
+     */
+    public void addBlackSql(String cacheKey, SqlValidateResult sqlValidateResult) {
+    
+        //不启用黑名单缓存，则返回
+        if (!sqlValidatorProperties.getEnvProfiles().enableBlackListCache()) {
+            return;
+        }
+        
+        //锁定，拉黑
+        lock.writeLock().lock();
+        try {
+            
+            if (blackSqlList == null) {
+                blackSqlList = new LocalLRUCache<>(256);
+            }
+            
+            blackSqlList.put(cacheKey, sqlValidateResult);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    
     }
     
     public void clearCache() {
