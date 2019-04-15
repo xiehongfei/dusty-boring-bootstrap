@@ -11,13 +11,19 @@ package com.dusty.boring.mybatis.sql.validater;
 import com.dusty.boring.mybatis.sql.autoconfig.SqlValidatorProperties;
 import com.dusty.boring.mybatis.sql.common.annotation.MetaData;
 import com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool;
+import com.google.common.collect.Sets;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.Collections;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool.ZERO;
+import static com.dusty.boring.mybatis.sql.intercept.BadSqlValidateIntercepter.blackSqlList;
+import static com.dusty.boring.mybatis.sql.intercept.BadSqlValidateIntercepter.dbiDataList;
+import static com.dusty.boring.mybatis.sql.intercept.BadSqlValidateIntercepter.whiteSqlList;
 
 /**
  * <pre>
@@ -54,8 +60,8 @@ public abstract class SqlValidateProvider {
      * <pre>
      *     检查合法性
      *
-     * @param  sql
-     * @return
+     * @param   sql 带校验的sql语句
+     * @return  校验结果
      * </pre>
      */
     public boolean validateSql(String sql) {
@@ -66,6 +72,59 @@ public abstract class SqlValidateProvider {
     
     public SqlValidateResult validateInternal(String sql) {
         
+        
         return new SqlValidateResult(sql);
+    }
+    
+    public Set<String> getWhiteSqlList() {
+        
+        Set<String> sqlSet = Sets.newHashSet();
+        lock.readLock().lock();
+        try {
+            
+            if (Objects.nonNull(whiteSqlList))
+                sqlSet.addAll(whiteSqlList.keySet());
+            
+        } finally {
+            lock.readLock().unlock();
+        }
+        
+        return Collections.unmodifiableSet(sqlSet);
+    }
+    
+    public Set<String> getBlackSqlList() {
+        
+        Set<String> sqlSet = Sets.newHashSet();
+        lock.readLock().lock();
+        try {
+            
+            if (Objects.nonNull(blackSqlList))
+                sqlSet.addAll(blackSqlList.keySet());
+            
+        } finally {
+            lock.readLock().unlock();
+        }
+        
+        return Collections.unmodifiableSet(sqlSet);
+    }
+    
+    public void clearCache() {
+        
+        lock.writeLock().lock();
+        
+        try {
+            
+            if (Objects.nonNull(whiteSqlList))
+                whiteSqlList = null;
+            
+            if (Objects.nonNull(blackSqlList))
+                blackSqlList = null;
+            
+            if (Objects.nonNull(dbiDataList))
+                dbiDataList = null;
+            
+        } finally {
+            lock.writeLock().unlock();
+        }
     }
 }

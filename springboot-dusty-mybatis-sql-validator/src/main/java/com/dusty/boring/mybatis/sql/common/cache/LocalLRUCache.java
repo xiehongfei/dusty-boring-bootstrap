@@ -33,7 +33,7 @@ public class LocalLRUCache<K, V> extends LRUMap<K, V> {
     }
     
     public LocalLRUCache(int maxSize) {
-        super(maxSize, DEFAULT_CACHE_INITIAL_SIZE);
+        super(maxSize, maxSize < DEFAULT_CACHE_INITIAL_SIZE ? maxSize : DEFAULT_CACHE_INITIAL_SIZE);
     }
     
 }

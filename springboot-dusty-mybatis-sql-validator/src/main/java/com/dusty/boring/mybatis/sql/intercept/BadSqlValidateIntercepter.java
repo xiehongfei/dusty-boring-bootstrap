@@ -33,6 +33,7 @@ import org.apache.ibatis.mapping.SqlCommandType;
 import org.apache.ibatis.plugin.*;
 import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.reflection.SystemMetaObject;
+import org.springframework.util.Assert;
 
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
@@ -78,14 +79,13 @@ public class BadSqlValidateIntercepter implements Interceptor {
     
     
     @MetaData(value = "检查白名单", note = "已知可忽略检查的sql")
-    private static final LocalLRUCache<String, String> whiteSqlList;
+    public static LocalLRUCache<String, String> whiteSqlList;
     
     @MetaData(value = "检查黑名单", note = "已知未通过检查的sql")
-    private static final LocalLRUCache<String, SqlValidateResult> blackSqlList;
+    public static LocalLRUCache<String, SqlValidateResult> blackSqlList;
     
     @MetaData(value = "索引信息缓存")
-    private static final LRUMap<String, List<MyBatisConstPool.DbiData>> dbiDataList;
-    
+    public static LocalLRUCache<String, List<DbiData>> dbiDataList;
     
     static {
         
@@ -105,7 +105,7 @@ public class BadSqlValidateIntercepter implements Interceptor {
         try {
     
             //当前环境忽略检查
-            if (ignoreValidate(sqlValidatorProperties)) {
+            if (ignoreEnvsValidate(sqlValidatorProperties)) {
                 invocation.proceed();
             }
     
@@ -116,7 +116,8 @@ public class BadSqlValidateIntercepter implements Interceptor {
                                                items.isEnableWhereCheck(),items.isEnableIndexCheck()))) {
                 invocation.proceed();
             }
-    
+            
+            //准备sql校验资源
             Connection conn                 = (Connection) invocation.getArgs()[0];
             final DatabaseMetaData metaData = conn.getMetaData();
             final String dbTypeName         = metaData.getDatabaseProductName();
@@ -130,37 +131,30 @@ public class BadSqlValidateIntercepter implements Interceptor {
             String sqlImage = StringUtils.replaceAll(toExecSql, "\\t|\\r|\\n", "");
             String encryptedSql = EncryptUtils.base64(EncryptUtils.md5(sqlImage));
             
-            if (whiteSqlList.containsKey(encryptedSql)) {
+            //检查sql白名单（包括已知通过校验的sql及已知标记‘IgnoreSqlChecker’忽略的sql）
+            if (enabledEnvsWhiteList(sqlValidatorProperties) && whiteSqlList.containsKey(encryptedSql)) {
                 invocation.proceed();
             }
             
-            SqlValidateResult result = blackSqlList.get(encryptedSql);
-            if (Objects.nonNull(result) && result.getViolations().size() > 0) {
-                final List<SqlValidateResult.Violation> violations = result.getViolations();
-                final SqlValidateResult.Violation       violation  = violations.get(0);
-                throw new IllegalStateException(String.format("校验未通过，错误码:%s,错误信息:%s", violation.getErrorCode(), violation.getMessage()));
+            //检查已知黑名单
+            if (enabledEnvsBlackList(sqlValidatorProperties)) {
+                SqlValidateResult result = blackSqlList.get(encryptedSql);
+                if (Objects.nonNull(result) && result.getViolations().size() > 0) {
+                    final List<SqlValidateResult.Violation> violations = result.getViolations();
+                    final SqlValidateResult.Violation       violation  = violations.get(0);
+                    throw new IllegalStateException(String.format("校验未通过，错误码:%s,错误信息:%s", violation.getErrorCode(), violation.getMessage()));
+                }
             }
             
-            final MyBatisConstPool.DbTypeEnum dbTypeEnum = MyBatisConstPool.DbTypeEnum.valueOf(dbTypeName);
-    
-            SqlValidateProvider sqlValidateProvider = null;
-            if (MyBatisConstPool.DbTypeEnum.MySql.equals(dbTypeEnum)) {
-                sqlValidateProvider = SpringContextHolder.getBean(MySqlSqlValidateProvider.class);
-            } else if (MyBatisConstPool.DbTypeEnum.Oracle.equals(dbTypeEnum)) {
-                sqlValidateProvider = SpringContextHolder.getBean(OracleSqlValidateProvider.class);
-            }
-            
-            if (Objects.isNull(sqlValidateProvider)) {
-                throw new IllegalStateException("");
-            }
-            
-            sqlValidateProvider.validateSql(toExecSql);
             //忽略检查INSERT语句
             if (SqlCommandType.INSERT.equals(mappedStatement.getSqlCommandType())) {
                 return invocation.proceed();
             }
-            
-            //if (whiteSqlList.containsKey())
+    
+            SqlValidateProvider sqlValidateProvider = getSqlValidateProvider(dbTypeName);
+            if (sqlValidateProvider.validateSql(toExecSql)) {
+                //验证通过
+            }
     
         } finally {
             
@@ -218,8 +212,69 @@ public class BadSqlValidateIntercepter implements Interceptor {
         return (T) target;
     }
     
-    private static boolean ignoreValidate(SqlValidatorProperties properties) {
+    /**
+     * <pre>
+     *     当前环境是否忽略sql质量检查的环境
+     *
+     * @param  properties 检查配置
+     * @return bool
+     *           - true  : 是（忽略检查）
+     *           - false : 否（不忽略检查）
+     * </pre>
+     */
+    private static boolean ignoreEnvsValidate(SqlValidatorProperties properties) {
         return properties.getEnvProfiles().getIgnoreCheckEnvs().contains(SpringContextHolder.getActiveProfile());
+    }
+    
+    /**
+     * <pre>
+     *     当前环境是否启用白名单
+     *
+     * @param  properties 检查配置
+     * @return bool
+     *           - true  : 是（启用）
+     *           - false : 否（未启用）
+     * </pre>
+     */
+    private static boolean enabledEnvsWhiteList(SqlValidatorProperties properties) {
+        return properties.getEnvProfiles().getEnableWhiteListCacheEnvs().contains(SpringContextHolder.getActiveProfile());
+    }
+    
+    /**
+     * <pre>
+     *     当前环境是否启用黑名单
+     *
+     * @param  properties 检查配置
+     * @return bool
+     *           - true  : 是（启用）
+     *           - false : 否（未启用）
+     * </pre>
+     */
+    private static boolean enabledEnvsBlackList(SqlValidatorProperties properties) {
+        return properties.getEnvProfiles().getEnableBlackListCacheEnvs().contains(SpringContextHolder.getActiveProfile());
+    }
+    
+    /**
+     * <pre>
+     *     获取sql检查器
+     *
+     * @param  dbTypeName 数据库类型名称（如:MySql）
+     * @return SqlValidateProvider实例
+     * </pre>
+     */
+    private static SqlValidateProvider getSqlValidateProvider(String dbTypeName) {
+    
+        SqlValidateProvider sqlValidateProvider = null;
+        final DbTypeEnum dbTypeEnum = DbTypeEnum.valueOf(dbTypeName);
+        if (DbTypeEnum.MySql.equals(dbTypeEnum)) {
+            sqlValidateProvider = SpringContextHolder.getBean(MySqlSqlValidateProvider.class);
+        } else if (DbTypeEnum.Oracle.equals(dbTypeEnum)) {
+            sqlValidateProvider = SpringContextHolder.getBean(OracleSqlValidateProvider.class);
+        }
+    
+        Assert.notNull(sqlValidateProvider, "SqlValidateProvide不能为空！");
+        
+        return sqlValidateProvider;
     }
     
     /**
