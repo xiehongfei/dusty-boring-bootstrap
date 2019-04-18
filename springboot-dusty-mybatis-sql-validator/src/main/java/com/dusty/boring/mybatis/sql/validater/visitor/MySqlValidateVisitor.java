@@ -12,21 +12,27 @@ import com.alibaba.druid.sql.ast.*;
 import com.alibaba.druid.sql.ast.expr.*;
 import com.alibaba.druid.sql.ast.statement.*;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlSelectQueryBlock;
+import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlUpdateStatement;
 import com.dusty.boring.mybatis.sql.autoconfig.SqlValidatorProperties;
+import com.dusty.boring.mybatis.sql.common.annotation.MetaData;
 import com.dusty.boring.mybatis.sql.common.pool.SqlErrorCodeEnum;
 import com.dusty.boring.mybatis.sql.common.utils.JsonUtils;
 import com.dusty.boring.mybatis.sql.validater.SqlValidateUtils;
 import com.dusty.boring.mybatis.sql.validater.provider.AbstractSqlValidateProvider;
 import com.dusty.boring.mybatis.sql.validater.provider.MySqlValidateProvider;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import static com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool.DbTypeEnum;
 import static com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool.SQL_COUNT_EXPRESSION;
-import static com.dusty.boring.mybatis.sql.common.pool.SqlErrorCodeEnum.SQL9000;
-import static com.dusty.boring.mybatis.sql.common.pool.SqlErrorCodeEnum.SQL9003;
+import static com.dusty.boring.mybatis.sql.common.pool.SqlErrorCodeEnum.*;
 import static com.dusty.boring.mybatis.sql.validater.SqlValidateResult.Violation;
 
 /**
@@ -45,6 +51,23 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     private final MySqlValidateProvider sqlValidateProvider;
     private final SqlValidatorProperties sqlValidatorProperties;
     private final List<Violation> violations = Lists.newArrayList();
+    private final Map<String, String> tables = Maps.newHashMap();
+    private final Map<String, Objects> columns = Maps.newHashMap();
+    
+    
+    @Getter
+    @Setter
+    public class DbR2Column {
+        
+        @MetaData(value = "表名")
+        private String tableName;
+        
+        @MetaData(value = "列名")
+        private String columnName;
+        
+        @MetaData(value = "排序号")
+        private Integer order;
+    }
     
     
     public MySqlValidateVisitor(MySqlValidateProvider sqlValidateProvider) {
@@ -101,7 +124,8 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLBinaryOpExpr sqlBinaryOpExpr) {
-        System.out.println(String.format("访问到sqlBinaryOpExpr:%s", JsonUtils.object2String(sqlBinaryOpExpr.getOperator())));
+        System.out.println(String.format("访问到sqlBinaryOpExpr:%s\n-\tleft: %s \n-\tright: %s",
+                JsonUtils.object2String(sqlBinaryOpExpr.getOperator()), sqlBinaryOpExpr.getLeft(), sqlBinaryOpExpr.getRight()));
         return true;
     }
     
@@ -231,13 +255,13 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLSelectStatement sqlSelectStatement) {
+        System.out.println(sqlSelectStatement);
         return true;
     }
     
     @Override
     public boolean visit(SQLAggregateExpr x) {
         System.out.println(x);
-        
         return true;
     }
     
@@ -277,13 +301,20 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
         return true;
     }
     
+    /**
+     * <pre>
+     *     验证select是否包含where条件
+     *
+     * @param sqlSelectQueryBlock
+     * @return
+     * </pre>
+     */
     private boolean validateSelectQueryBlock(SQLSelectQueryBlock sqlSelectQueryBlock) {
         
         if (Objects.isNull(sqlSelectQueryBlock.getWhere()) && Objects.isNull(sqlSelectQueryBlock.getLimit())) {
             boolean hasCnt = false;
             final List<SQLSelectItem> selectList = sqlSelectQueryBlock.getSelectList();
             for (SQLSelectItem item : selectList) {
-            
                 if (SQL_COUNT_EXPRESSION.equalsIgnoreCase(item.getExpr().toString())) {
                     hasCnt = true;
                     break;
@@ -294,6 +325,10 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
                 addViolation(new Violation(SQL9003));
                 return false;
             }
+        } else {
+            final SQLExpr where = sqlSelectQueryBlock.getWhere();
+            where.getAttributes();
+            
         }
     
         return true;
@@ -301,6 +336,7 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLSelectQueryBlock sqlSelectQueryBlock) {
+        System.out.println(sqlSelectQueryBlock);
        return validateSelectQueryBlock(sqlSelectQueryBlock);
     }
     
@@ -359,11 +395,17 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     @Override
     public boolean visit(SQLDeleteStatement sqlDeleteStatement) {
         System.out.println(sqlDeleteStatement);
+        if (Objects.isNull(sqlDeleteStatement.getWhere())
+                && getSqlValidatorProperties().getMySqlValidItems().isEnableWhereCheck()) {
+            addViolation(new Violation(SQL9004));
+            return false;
+        }
         return true;
     }
     
     @Override
     public boolean visit(SQLCurrentOfCursorExpr sqlCurrentOfCursorExpr) {
+        System.out.println(sqlCurrentOfCursorExpr);
         return true;
     }
     
@@ -388,6 +430,11 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     @Override
     public boolean visit(SQLUpdateStatement sqlUpdateStatement) {
         System.out.println(sqlUpdateStatement);
+        if (Objects.isNull(sqlUpdateStatement.getWhere())
+                && getSqlValidatorProperties().getMySqlValidItems().isEnableWhereCheck()) {
+            addViolation(new Violation(SQL9005));
+            return false;
+        }
         return true;
     }
     
@@ -440,7 +487,16 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLJoinTableSource sqlJoinTableSource) {
+        
+        if (sqlJoinTableSource.getParent() instanceof MySqlUpdateStatement
+                && Objects.nonNull(sqlJoinTableSource.getLeft())
+                && Objects.nonNull(sqlJoinTableSource.getLeft())
+                && Objects.nonNull(sqlJoinTableSource.getRight()) ) {
+            //告警：关联太多表进行更新操作
+        }
+        
         System.out.println(sqlJoinTableSource);
+        
         return true;
     }
     
@@ -558,13 +614,13 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLReleaseSavePointStatement sqlReleaseSavePointStatement) {
-        System.out.println();
+        System.out.println(sqlReleaseSavePointStatement);
         return true;
     }
     
     @Override
     public boolean visit(SQLCommentHint sqlCommentHint) {
-        System.out.println();
+        System.out.println(sqlCommentHint);
         return true;
     }
     
@@ -582,6 +638,7 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLKeep sqlKeep) {
+        System.out.println(sqlKeep);
         return true;
     }
     
@@ -650,12 +707,13 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLAlterTableStatement sqlAlterTableStatement) {
-        
+        System.out.println(sqlAlterTableStatement);
         return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableDisableConstraint sqlAlterTableDisableConstraint) {
+        System.out.println(sqlAlterTableDisableConstraint);
         return enabledDdlStatement();
     }
     
@@ -696,7 +754,8 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLCreateIndexStatement sqlCreateIndexStatement) {
-        return true;
+        System.out.println(sqlCreateIndexStatement);
+        return enabledDdlStatement();
     }
     
     @Override
@@ -706,11 +765,13 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLColumnReference sqlColumnReference) {
+        System.out.println(sqlColumnReference);
         return true;
     }
     
     @Override
     public boolean visit(SQLForeignKeyImpl sqlForeignKey) {
+        System.out.println(sqlForeignKey);
         return true;
     }
     
@@ -776,11 +837,14 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLBooleanExpr sqlBooleanExpr) {
+        System.out.println(sqlBooleanExpr);
         return true;
     }
     
     @Override
     public boolean visit(SQLUnionQueryTableSource sqlUnionQueryTableSource) {
+        System.out.println("——————————————————————————————————————————————————");
+        System.out.println("查询到：SqlUnionQueryTableSource" + sqlUnionQueryTableSource);
         return true;
     }
     
@@ -796,6 +860,8 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLBinaryExpr sqlBinaryExpr) {
+        System.out.println("——————————————————————————————");
+        System.out.println("访问到SQLBinaryExpr:" + sqlBinaryExpr);
         return true;
     }
     
@@ -811,7 +877,8 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLShowTablesStatement sqlShowTablesStatement) {
-        return true;
+        addViolation(new Violation(SqlErrorCodeEnum.SQL9000));
+        return false;
     }
     
     @Override
@@ -851,21 +918,27 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLAlterTableTouch sqlAlterTableTouch) {
-        return true;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLArrayExpr sqlArrayExpr) {
+        System.out.println("——————————————————————————————————————————");
+        System.out.println("访问到SQLArrayExpr" + sqlArrayExpr);
         return true;
     }
     
     @Override
     public boolean visit(SQLOpenStatement sqlOpenStatement) {
+        System.out.println("——————————————————————————————————————————");
+        System.out.println("访问到SQLOpenStatement" + sqlOpenStatement);
         return true;
     }
     
     @Override
     public boolean visit(SQLFetchStatement sqlFetchStatement) {
+        System.out.println("——————————————————————————————————————————");
+        System.out.println("访问到SQLFetchStatement" + sqlFetchStatement);
         return true;
     }
     
@@ -876,46 +949,61 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLGroupingSetExpr sqlGroupingSetExpr) {
+        System.out.println("————————————————————————————");
+        System.out.println("访问到SQLGroupingSetExpr" + sqlGroupingSetExpr);
         return true;
     }
     
     @Override
     public boolean visit(SQLIfStatement sqlIfStatement) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLIfStatment" + sqlIfStatement);
         return true;
     }
     
     @Override
     public boolean visit(SQLIfStatement.ElseIf elseIf) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLIfStatment.ElseIf" + elseIf);
         return true;
     }
     
     @Override
     public boolean visit(SQLIfStatement.Else anElse) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLIfStatment.Else" + anElse);
         return true;
     }
     
     @Override
     public boolean visit(SQLLoopStatement sqlLoopStatement) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLLoopStatment" + sqlLoopStatement);
         return true;
     }
     
     @Override
     public boolean visit(SQLParameter sqlParameter) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLParameter" + sqlParameter);
+        
         return true;
     }
     
     @Override
     public boolean visit(SQLCreateProcedureStatement sqlCreateProcedureStatement) {
-        return true;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLCreateFunctionStatement sqlCreateFunctionStatement) {
-        return true;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLBlockStatement sqlBlockStatement) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLBlockStatement" + sqlBlockStatement);
         return true;
     }
     
@@ -926,6 +1014,8 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLDeclareItem sqlDeclareItem) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLDeclareItem" + sqlDeclareItem);
         return true;
     }
     
@@ -971,27 +1061,27 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLAlterDatabaseStatement sqlAlterDatabaseStatement) {
-        return true;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableConvertCharSet sqlAlterTableConvertCharSet) {
-        return true;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableReOrganizePartition sqlAlterTableReOrganizePartition) {
-        return true;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableCoalescePartition sqlAlterTableCoalescePartition) {
-        return true;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableTruncatePartition sqlAlterTableTruncatePartition) {
-        return true;
+        return enabledDdlStatement();
     }
     
     @Override
@@ -1031,11 +1121,15 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLSequenceExpr sqlSequenceExpr) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLSequenceExpr" + sqlSequenceExpr);
         return true;
     }
     
     @Override
     public boolean visit(SQLMergeStatement sqlMergeStatement) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLMergeStatement" + sqlMergeStatement);
         return true;
     }
     
@@ -1066,11 +1160,15 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLDateExpr sqlDateExpr) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLDateExpr" + sqlDateExpr);
         return true;
     }
     
     @Override
     public boolean visit(SQLLimit sqlLimit) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLIfStatment" + sqlLimit);
         return true;
     }
     
@@ -1086,6 +1184,8 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLWhileStatement sqlWhileStatement) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLWhileStatment" + sqlWhileStatement);
         return true;
     }
     
@@ -1096,6 +1196,8 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLReturnStatement sqlReturnStatement) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLReturnStatment" + sqlReturnStatement);
         return true;
     }
     
@@ -1121,11 +1223,15 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLBinaryOpExprGroup sqlBinaryOpExprGroup) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLBinaryOpExprGroup" + sqlBinaryOpExprGroup);
         return true;
     }
     
     @Override
     public boolean visit(SQLScriptCommitStatement sqlScriptCommitStatement) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLScriptCommitStatment" + sqlScriptCommitStatement);
         return true;
     }
     
@@ -1151,6 +1257,8 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLIntervalExpr sqlIntervalExpr) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLIntervalExpr" + sqlIntervalExpr);
         return true;
     }
     
@@ -1171,6 +1279,8 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLExprStatement sqlExprStatement) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLExprStatment" + sqlExprStatement);
         return true;
     }
     
@@ -1191,27 +1301,29 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLDropLogFileGroupStatement sqlDropLogFileGroupStatement) {
-        return true;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLDropServerStatement sqlDropServerStatement) {
-        return true;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLDropSynonymStatement sqlDropSynonymStatement) {
-        return true;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLRecordDataType sqlRecordDataType) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLRecordDataType" + sqlRecordDataType);
         return true;
     }
     
     @Override
     public boolean visit(SQLDropTypeStatement sqlDropTypeStatement) {
-        return true;
+        return enabledDdlStatement();
     }
     
     @Override
@@ -1236,17 +1348,19 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLStructDataType.Field field) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLStructType.Field" + field);
         return true;
     }
     
     @Override
     public boolean visit(SQLDropMaterializedViewStatement sqlDropMaterializedViewStatement) {
-        return true;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableRenameIndex sqlAlterTableRenameIndex) {
-        return true;
+        return enabledDdlStatement();
     }
     
     @Override
@@ -1261,31 +1375,43 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLValuesExpr sqlValuesExpr) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLValuesExpr" + sqlValuesExpr);
         return true;
     }
     
     @Override
     public boolean visit(SQLValuesTableSource sqlValuesTableSource) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLValuesTableSource" + sqlValuesTableSource);
         return true;
     }
     
     @Override
     public boolean visit(SQLContainsExpr sqlContainsExpr) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLContainsExpr" + sqlContainsExpr);
         return true;
     }
     
     @Override
     public boolean visit(SQLRealExpr sqlRealExpr) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLRealExpr" + sqlRealExpr);
         return true;
     }
     
     @Override
     public boolean visit(SQLWindow sqlWindow) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLWindow" + sqlWindow);
         return true;
     }
     
     @Override
     public boolean visit(SQLDumpStatement sqlDumpStatement) {
+        System.out.println("--------------------------");
+        System.out.println("访问到SQLDumpStatment" + sqlDumpStatement);
         return true;
     }
 }

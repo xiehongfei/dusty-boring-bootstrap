@@ -47,6 +47,27 @@ public class SqlValidateProviderTest extends TestCase {
                 + " WHERE     b.user_id = ? and     ((b.is_grid='y' and c.param_name='is_hidden' and c.param_value='false') or " +
                 "     b.is_grid  != 'y') and b.user_id in (select user_id from table1 where id = 1)    ORDER BY    a.col ASC, a.position ASC";
         
+//        sql = "delete from t_label";
+//        sql = "update scheme.table set col_1 = 1, col2 = '2'";
+//
+//        sql = "UPDATE t_price, t_basic_store s " + //
+//                "SET purchasePrice = :purchasePrice, operaterId = :operaterId, " + //
+//                "    operaterRealName = :operaterRealName, operateDateline = :operateDateline " + //
+//                "WHERE goodsId = :goodsId AND s.id = storeId AND s.areaId = :areaId";
+//
+//        sql = "update t1, t2, t3 inner join t4 using (col_name1, col_name2)\n" +
+//                "set t1.value_col = t3.new_value_col, t4.`some-col*` = `t2`.`***` * 2\n" +
+//                "where  t1.pk = t2.fk_t1_pk and t2.id = t4.fk_id_entity;";
+//
+//        sql = "INSERT INTO hz_dev_hb.tb_tmp_cda_opera_281c (target, appeartimes, source_id) SELECT\n" +
+//                "           VARCHAR20,\n" +
+//                "           count(1)          AS appeartimes,\n" +
+//                "           'resource_count1' as source_id\n" +
+//                "         FROM hz_dev_hb.tb_fxzx_large t1\n" +
+//                "         WHERE 1 = 1 AND VARCHAR20 IS NOT NULL AND\n" +
+//                "               MISSIONID =\n" +
+//                "               'd2051b6549d9a028e83a8a9ab2c2'\n" +
+//                "         GROUP BY VARCHAR20";
         SqlValidatorProperties properties = new SqlValidatorProperties();
         properties.setEnvProfiles(new SqlValidatorProperties.EnvProfiles());
         properties.setMySqlValidItems(new SqlValidatorProperties.MySqlValidateItems());
@@ -60,8 +81,10 @@ public class SqlValidateProviderTest extends TestCase {
         }
         
         if (Objects.nonNull(visitor.getViolations()) && visitor.getViolations().size() > 0) {
-            final SqlValidateResult.Violation violation = visitor.getViolations().get(0);
-            System.out.println(String.format("\n-\t拦截结果:%s-%s", violation.getErrorCode(), violation.getMessage()));
+           
+            for (SqlValidateResult.Violation violation : visitor.getViolations()) {
+                System.out.println(String.format("\n-\t拦截结果:\t%s-%s", violation.getErrorCode(), violation.getMessage()));
+            }
         }
         
         SQLUtils.parseStatements(sql, MyBatisConstPool.DbTypeEnum.MySql.name());
