@@ -19,13 +19,13 @@ package com.dusty.boring.mybatis.sql.common.pool;
  * @review: xiehongfei[xie_hf@suixingpay.com]/2019年04月15日 17:52
  * </pre>
  */
-public enum  SqlErrorCode implements EnumKeyLabelPair {
+public enum SqlErrorCodeEnum implements EnumKeyLabelPair {
     
     
     SQL9000 {
         @Override
         public String getLabel() {
-            return "拒绝执行的SQL, Forbid Statement!";
+            return "拒绝执行的SQL";
         }
     },
     

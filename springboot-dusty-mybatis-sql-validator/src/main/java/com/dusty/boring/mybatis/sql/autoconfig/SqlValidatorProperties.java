@@ -11,6 +11,7 @@ package com.dusty.boring.mybatis.sql.autoconfig;
 import com.dusty.boring.mybatis.sql.common.annotation.MetaData;
 import com.dusty.boring.mybatis.sql.common.context.SpringContextHolder;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Booleans;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections4.CollectionUtils;
@@ -23,6 +24,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+
+import static com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool.ZERO;
 
 /**
  * <pre>
@@ -42,6 +45,9 @@ public class SqlValidatorProperties {
     
     @MetaData(value = "环境标签项")
     private EnvProfiles envProfiles;
+    
+//    @MetaData(value = "检查项配置")
+//    private ValidateItems validateItems;
     
     @MetaData(value = "检查项配置")
     private MySqlValidateItems mySqlValidItems;
@@ -86,33 +92,55 @@ public class SqlValidatorProperties {
     public static class ValidateItems implements Serializable {
     
         private static final long serialVersionUID = 4806471600092005124L;
+    
+        @MetaData(value = "是否启用DDL语句Drop*命令", note = "默认：关闭")
+        private boolean enableDdlDrop                                    = false;
         
-        @MetaData(value = "是否启用In检查", note = "默认：关闭")
-        private boolean enableInCheck = false;
+        @MetaData(value = "是否允许comment语句", note = "默认：关闭")
+        private boolean enableDdlComment                                 = false;
+        
+        @MetaData(value = "是否允许使用IN语句", note = "默认：关闭")
+        private boolean enableCondIn                                     = true;
     
-        @MetaData(value = "是否启用OR检查", note = "默认：关闭")
-        private boolean enableOrCheck = false;
+        @MetaData(value = "是否启用OR语句", note = "默认：关闭")
+        private boolean enableCondOr                                     = true;
     
-        @MetaData(value = "是否启用NotEqual检查", note = "默认：开启")
-        private boolean notEqualCheck = true;
+        @MetaData(value = "是否启用NotEqual语句", note = "默认：开启")
+        private boolean enableCondNE                                     = false;
     
         @MetaData(value = "是否启用Where条件检查", note = "默认：开启")
-        private boolean enableWhereCheck = true;
-    
-        @MetaData(value = "是否启用索引检查", note = "默认：关闭")
-        private boolean enableIndexCheck = false;
+        private boolean enableWhereCheck                                 = true;
     
         @MetaData(value = "是否启用LIKE检查", note = "默认：开启")
-        private boolean enableLikeCheck = true;
+        private boolean enableLikeCond                                   = true;
     
-        @MetaData(value = "是否启用Where条件Like检查", note = "默认：开启")
-        private boolean enableWhereLikeCheck = false;
+        @MetaData(value = "是否启用索引检查", note = "默认：关闭")
+        private boolean mustUseIndexCheck                                = false;
+        
+        @MetaData(value = "是否允许explain语句", note = "默认：开启")
+        private boolean enableExplain                                    = true;
+        
+        @MetaData(value = "是否允许sql优化语句", note = "默认：开启")
+        private boolean sqlOptimize                                      = true;
     }
     
+    @Getter
+    @Setter
     @MetaData(value = "MySql检查项")
     public static class MySqlValidateItems extends ValidateItems {
     
         private static final long serialVersionUID = -8320378595257516228L;
+        
+        @MetaData(value = "是否允许LockTable命令", note = "默认：关闭")
+        private boolean enableLockTable = false;
+        
+        public boolean anyItemsTrue() {
+    
+            return ZERO.equals(Booleans.countTrue(
+                    isEnableCondIn(), isEnableCondOr(),
+                    isEnableLikeCond(), isEnableCondNE(),
+                    isEnableWhereCheck(), isMustUseIndexCheck()));
+        }
         
     }
     

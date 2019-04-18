@@ -13,20 +13,19 @@ import com.dusty.boring.mybatis.sql.common.annotation.IgnoreSqlChecker;
 import com.dusty.boring.mybatis.sql.common.annotation.MetaData;
 import com.dusty.boring.mybatis.sql.common.cache.LocalLRUCache;
 import com.dusty.boring.mybatis.sql.common.context.SpringContextHolder;
-import com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool;
+import com.dusty.boring.mybatis.sql.common.exception.IllegalSqlValidateException;
+import com.dusty.boring.mybatis.sql.common.pool.SqlErrorCodeEnum;
 import com.dusty.boring.mybatis.sql.common.utils.EncryptUtils;
-import com.dusty.boring.mybatis.sql.validater.MySqlSqlValidateProvider;
-import com.dusty.boring.mybatis.sql.validater.OracleSqlValidateProvider;
-import com.dusty.boring.mybatis.sql.validater.SqlValidateProvider;
+import com.dusty.boring.mybatis.sql.validater.provider.MySqlValidateProvider;
+import com.dusty.boring.mybatis.sql.validater.provider.OracleValidateProvider;
+import com.dusty.boring.mybatis.sql.validater.provider.AbstractSqlValidateProvider;
 import com.dusty.boring.mybatis.sql.validater.SqlValidateResult;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Booleans;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.schema.Table;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.collections4.map.LRUMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.mapping.BoundSql;
@@ -59,6 +58,7 @@ import static com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool.*;
  *           - 校验sql规范情况
  *             目前主要为where条件空拦截/查询未使用索引拦截/Or拦截/‘<>’拦截
  *
+ *           - SQL解析资料:<a href='https://github.com/alibaba/druid'>Druid</a>
  *           - SQL解析资料:<a href='https://github.com/JSQLParser/JSqlParser'>JSqlParser</a>
  *
  * @author xiehongfei[xie_hf@suixingpay.com]
@@ -105,7 +105,7 @@ public class BadSqlValidateIntercepter implements Interceptor {
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
     
-        String    execSql                     = null;
+        String    toExecSql                   = null;
         boolean   checked                     = false;
         Stopwatch stopwatch                   = Stopwatch.createStarted();
         SqlValidatorProperties sqlValidatorProperties = SpringContextHolder.getBean(SqlValidatorProperties.class);
@@ -113,15 +113,13 @@ public class BadSqlValidateIntercepter implements Interceptor {
         try {
     
             //当前环境忽略检查
-            if (ignoreEnvsValidate(sqlValidatorProperties)) {
+            if (ignoreValidateByEnvs(sqlValidatorProperties)) {
                 return invocation.proceed();
             }
     
             //当前系统配置忽略检查
             final SqlValidatorProperties.MySqlValidateItems items = sqlValidatorProperties.getMySqlValidItems();
-            if (ZERO.equals(Booleans.countTrue(items.isEnableInCheck(), items.isEnableOrCheck(),
-                                               items.isEnableLikeCheck(), items.isNotEqualCheck(),
-                                               items.isEnableWhereCheck(),items.isEnableIndexCheck()))) {
+            if (!items.anyItemsTrue()) {
                 return invocation.proceed();
             }
             
@@ -133,12 +131,12 @@ public class BadSqlValidateIntercepter implements Interceptor {
             MappedStatement mappedStatement = (MappedStatement) metaObject.getValue(DELEGATE_MAPPED_STMT);
     
             //标注IgnoreSqlChecker
-            if (ignoreCheckByAnnotated(mappedStatement)) {
+            if (ignoreValidateByAnnotated(mappedStatement)) {
                 return invocation.proceed();
             }
     
             BoundSql boundSql               = (BoundSql) metaObject.getValue(DELEGATE_BOUND_SQL);
-            String   toExecSql              = boundSql.getSql();
+            toExecSql                       = boundSql.getSql();
     
             //定义sql操作镜像副本
             String sqlImage = StringUtils.replaceAll(toExecSql, "\\t|\\r|\\n", "");
@@ -159,23 +157,23 @@ public class BadSqlValidateIntercepter implements Interceptor {
                 }
             }
             
-            
-            
             //忽略检查INSERT语句
             if (SqlCommandType.INSERT.equals(mappedStatement.getSqlCommandType())) {
                 return invocation.proceed();
             }
-            
-            
     
-            SqlValidateProvider sqlValidateProvider = getSqlValidateProvider(dbTypeName);
+            AbstractSqlValidateProvider sqlValidateProvider = getSqlValidateProvider(dbTypeName);
             final SqlValidateResult validateResult = sqlValidateProvider.validateSqlWithResult(toExecSql, encryptedSql);
             if (Objects.nonNull(validateResult) && validateResult.getViolations().size() > 0) {
                 //验证不通过
-                
+                throw IllegalSqlValidateException
+                        .builder()
+                            .code(SqlErrorCodeEnum.SQL9000.name())
+                            .message(SqlErrorCodeEnum.SQL9000.getLabel())
+                            .sqlInfo(validateResult.getSql())
+                            .violations(validateResult.getViolations())
+                        .build();
             }
-    
-    
         } finally {
             
             stopwatch.stop();
@@ -185,7 +183,7 @@ public class BadSqlValidateIntercepter implements Interceptor {
                     log.warn("\n-\tSQL执行完成:" +
                              "\n-\t是否检查:{}" +
                              "\n-\t总计耗时:{}" +
-                             "\n-\tSql内容:{}", costTime, checked, execSql);
+                             "\n-\tSql内容:{}", checked, costTime,  toExecSql);
                 }
             }
         }
@@ -241,7 +239,7 @@ public class BadSqlValidateIntercepter implements Interceptor {
      *           - false : 否（不忽略检查）
      * </pre>
      */
-    private static boolean ignoreEnvsValidate(SqlValidatorProperties properties) {
+    private static boolean ignoreValidateByEnvs(SqlValidatorProperties properties) {
         return properties.getEnvProfiles().getIgnoreCheckEnvs().contains(SpringContextHolder.getActiveProfile());
     }
     
@@ -253,7 +251,7 @@ public class BadSqlValidateIntercepter implements Interceptor {
      * @return bool
      * </pre>
      */
-    private static boolean ignoreCheckByAnnotated(MappedStatement stmt) throws ClassNotFoundException {
+    private static boolean ignoreValidateByAnnotated(MappedStatement stmt) throws ClassNotFoundException {
         
         final String id = stmt.getId();
         
@@ -274,6 +272,7 @@ public class BadSqlValidateIntercepter implements Interceptor {
         for (Method m : methods) {
             
             if (methodNm.equals(m.getName())) {
+                
                 if (m.isAnnotationPresent(IgnoreSqlChecker.class)) {
                     //忽略SQL检查,代理类，无法获取方法注解
                     ANNOTATED_IGNORE_CHECK_METHODS.add(stmtId);
@@ -324,14 +323,14 @@ public class BadSqlValidateIntercepter implements Interceptor {
      * @return SqlValidateProvider实例
      * </pre>
      */
-    private static SqlValidateProvider getSqlValidateProvider(String dbTypeName) {
+    private static AbstractSqlValidateProvider getSqlValidateProvider(String dbTypeName) {
     
-        SqlValidateProvider sqlValidateProvider = null;
+        AbstractSqlValidateProvider sqlValidateProvider = null;
         final DbTypeEnum dbTypeEnum = DbTypeEnum.valueOf(dbTypeName);
         if (DbTypeEnum.MySql.equals(dbTypeEnum)) {
-            sqlValidateProvider = SpringContextHolder.getBean(MySqlSqlValidateProvider.class);
+            sqlValidateProvider = SpringContextHolder.getBean(MySqlValidateProvider.class);
         } else if (DbTypeEnum.Oracle.equals(dbTypeEnum)) {
-            sqlValidateProvider = SpringContextHolder.getBean(OracleSqlValidateProvider.class);
+            sqlValidateProvider = SpringContextHolder.getBean(OracleValidateProvider.class);
         }
     
         Assert.notNull(sqlValidateProvider, "SqlValidateProvide不能为空！");
