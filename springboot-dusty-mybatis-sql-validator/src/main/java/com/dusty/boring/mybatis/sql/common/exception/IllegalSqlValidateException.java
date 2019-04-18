@@ -44,20 +44,5 @@ public class IllegalSqlValidateException extends RuntimeException {
     @Setter
     @Getter
     private List<SqlValidateResult.Violation> violations;
-    
-    
-    public IllegalSqlValidateException() {
-    }
-    
-    public IllegalSqlValidateException(String code) {
-        this.code = code;
-        this.setMessage(this.message);
-    }
-    
-    public IllegalSqlValidateException(String code, String message) {
-        this.code = code;
-        this.setMessage(message);
-    }
-
 
 }

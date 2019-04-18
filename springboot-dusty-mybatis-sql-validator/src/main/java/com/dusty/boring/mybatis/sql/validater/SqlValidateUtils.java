@@ -13,11 +13,10 @@ import com.alibaba.druid.sql.ast.SQLStatement;
 import com.alibaba.druid.sql.ast.statement.*;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlLockTableStatement;
 import com.dusty.boring.mybatis.sql.autoconfig.SqlValidatorProperties;
+import com.dusty.boring.mybatis.sql.common.pool.SqlErrorCodeEnum;
 import com.dusty.boring.mybatis.sql.validater.visitor.SqlValidateVisitor;
 
 import static com.dusty.boring.mybatis.sql.autoconfig.SqlValidatorProperties.MySqlValidateItems;
-import static com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool.VC9999;
-
 /**
  * <pre>
  *
@@ -58,26 +57,26 @@ public class SqlValidateUtils {
         String denyMessage   = null;
         
         if (x instanceof SQLDropStatement) {
-            errorCode = VC9999;
+            errorCode = SqlErrorCodeEnum.SQL9000.name();
             valid = validateItems.isEnableDdlDrop();
             denyMessage = "禁止使用DDL语法: drop";
         } else if (x instanceof SQLTruncateStatement) {
-            errorCode = VC9999;
+            errorCode = SqlErrorCodeEnum.SQL9000.name();
             denyMessage = "禁止使用truncate命令";
         } else if (x instanceof SQLAlterStatement) {
-            errorCode = VC9999;
+            errorCode = SqlErrorCodeEnum.SQL9000.name();
             denyMessage = "禁止使用alter命令";
         } else if (x instanceof SQLCommentStatement) {
-            errorCode = VC9999;
+            errorCode = SqlErrorCodeEnum.SQL9000.name();
             valid = validateItems.isEnableDdlComment();
             denyMessage = "禁止使用DDL语法: comment";
         } else if (x instanceof SQLExplainStatement) {
-            errorCode = VC9999;
+            errorCode = SqlErrorCodeEnum.SQL9000.name();
             valid = validateItems.isEnableExplain();
             denyMessage = "禁止使用explain命令";
         } else if (x instanceof MySqlLockTableStatement) {
             
-            errorCode = VC9999;
+            errorCode = SqlErrorCodeEnum.SQL9000.name();
             valid = validateItems.isEnableLockTable();
             denyMessage = "禁止使用lock table命令";
         }

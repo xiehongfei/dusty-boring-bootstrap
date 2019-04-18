@@ -93,6 +93,10 @@ public class SqlValidatorProperties {
     
         private static final long serialVersionUID = 4806471600092005124L;
     
+        
+        @MetaData(value = "是否启用DDL语句命令", note = "默认：关闭")
+        private boolean enableDdl                                       = false;
+        
         @MetaData(value = "是否启用DDL语句Drop*命令", note = "默认：关闭")
         private boolean enableDdlDrop                                    = false;
         
@@ -122,6 +126,9 @@ public class SqlValidatorProperties {
         
         @MetaData(value = "是否允许sql优化语句", note = "默认：开启")
         private boolean sqlOptimize                                      = true;
+        
+        @MetaData(value = "是否允许in子查询", note = "如：x in (select * from a) ， 默认：开启")
+        private boolean enableSqlInSubQuery                              = true;
     }
     
     @Getter

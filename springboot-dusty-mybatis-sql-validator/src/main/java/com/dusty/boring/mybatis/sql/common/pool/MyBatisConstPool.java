@@ -37,12 +37,6 @@ public interface MyBatisConstPool {
     
     String CACHED_VAL = "CACHED_VAL";
     
-    @MetaData(value = "Sql合法")
-    String VC0000 = "DB0000";
-    
-    @MetaData(value = "Sql非法")
-    String VC9999 = "DB9999";
-    
     String SQL_COUNT_EXPRESSION = "count";
     
     

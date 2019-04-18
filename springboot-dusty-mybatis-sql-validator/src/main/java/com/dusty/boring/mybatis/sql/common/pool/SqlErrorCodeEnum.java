@@ -32,7 +32,21 @@ public enum SqlErrorCodeEnum implements EnumKeyLabelPair {
     SQL9001 {
         @Override
         public String getLabel() {
-            return "";
+            return "禁止执行DDL命令";
+        }
+    },
+    
+    SQL9002 {
+        @Override
+        public String getLabel() {
+            return "禁止执行truncate命令";
+        }
+    },
+    
+    SQL9003 {
+        @Override
+        public String getLabel() {
+            return "禁止执行无Where条件的查询";
         }
     }
     

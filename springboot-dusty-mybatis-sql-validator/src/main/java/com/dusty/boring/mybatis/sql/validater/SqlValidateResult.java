@@ -9,6 +9,7 @@
 package com.dusty.boring.mybatis.sql.validater;
 
 import com.dusty.boring.mybatis.sql.common.annotation.MetaData;
+import com.dusty.boring.mybatis.sql.common.pool.SqlErrorCodeEnum;
 import com.google.common.collect.Lists;
 import lombok.Getter;
 import lombok.Setter;
@@ -63,6 +64,11 @@ public class SqlValidateResult {
             
             this.message = message;
             this.errorCode = errorCode;
+        }
+        
+        public Violation(SqlErrorCodeEnum sqlError) {
+            this.message = sqlError.getLabel();
+            this.errorCode = sqlError.name();
         }
     }
     

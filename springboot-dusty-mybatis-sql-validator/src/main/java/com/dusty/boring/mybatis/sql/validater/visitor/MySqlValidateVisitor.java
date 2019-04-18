@@ -11,15 +11,22 @@ package com.dusty.boring.mybatis.sql.validater.visitor;
 import com.alibaba.druid.sql.ast.*;
 import com.alibaba.druid.sql.ast.expr.*;
 import com.alibaba.druid.sql.ast.statement.*;
+import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlSelectQueryBlock;
 import com.dusty.boring.mybatis.sql.autoconfig.SqlValidatorProperties;
+import com.dusty.boring.mybatis.sql.common.pool.SqlErrorCodeEnum;
+import com.dusty.boring.mybatis.sql.common.utils.JsonUtils;
 import com.dusty.boring.mybatis.sql.validater.SqlValidateUtils;
 import com.dusty.boring.mybatis.sql.validater.provider.AbstractSqlValidateProvider;
 import com.dusty.boring.mybatis.sql.validater.provider.MySqlValidateProvider;
 import com.google.common.collect.Lists;
 
 import java.util.List;
+import java.util.Objects;
 
 import static com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool.DbTypeEnum;
+import static com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool.SQL_COUNT_EXPRESSION;
+import static com.dusty.boring.mybatis.sql.common.pool.SqlErrorCodeEnum.SQL9000;
+import static com.dusty.boring.mybatis.sql.common.pool.SqlErrorCodeEnum.SQL9003;
 import static com.dusty.boring.mybatis.sql.validater.SqlValidateResult.Violation;
 
 /**
@@ -88,1057 +95,1197 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLBetweenExpr sqlBetweenExpr) {
-    
-//        sqlBetweenExpr.getBeginExpr();
-//        sqlBetweenExpr.getEndExpr();
+        System.out.println(String.format("访问到Between语法\n-\t%s\n-\t %s", sqlBetweenExpr.getBeginExpr().toString(), sqlBetweenExpr.getEndExpr().toString()));
         return true;
     }
     
     @Override
     public boolean visit(SQLBinaryOpExpr sqlBinaryOpExpr) {
+        System.out.println(String.format("访问到sqlBinaryOpExpr:%s", JsonUtils.object2String(sqlBinaryOpExpr.getOperator())));
+        return true;
+    }
+    
+    /**
+     * <pre>
+     *     是否允许执行DDL语句，并执行相关操作
+     *     - 加入违规sql
+     *
+     * @return boolean
+     *             - true
+     *             - false
+     * </pre>
+     */
+    private boolean enabledDdlStatement() {
         
+        final SqlValidatorProperties.MySqlValidateItems mySqlValidItems = getSqlValidatorProperties().getMySqlValidItems();
+        
+        if (mySqlValidItems.isEnableDdl())
+            return true;
+        
+        addViolation(new Violation(SqlErrorCodeEnum.SQL9001));
         return false;
     }
     
+    
     @Override
     public boolean visit(SQLCaseExpr sqlCaseExpr) {
-        return false;
+        System.out.println(sqlCaseExpr);
+        return true;
     }
     
     @Override
     public boolean visit(SQLCaseExpr.Item item) {
-        return false;
+        System.out.println(item);
+        return true;
     }
     
     @Override
     public boolean visit(SQLCaseStatement sqlCaseStatement) {
-        return false;
+        System.out.println(sqlCaseStatement);
+        return true;
     }
     
     @Override
     public boolean visit(SQLCaseStatement.Item item) {
-        return false;
+        System.out.println(item);
+        return true;
     }
     
     @Override
     public boolean visit(SQLCastExpr sqlCastExpr) {
-        return false;
+        System.out.println(sqlCastExpr);
+        return true;
     }
     
     @Override
     public boolean visit(SQLCharExpr sqlCharExpr) {
-        return false;
+        System.out.println(sqlCharExpr);
+        return true;
     }
     
     @Override
     public boolean visit(SQLExistsExpr sqlExistsExpr) {
-        return false;
+        System.out.println(sqlExistsExpr);
+        return true;
     }
     
     @Override
     public boolean visit(SQLIdentifierExpr sqlIdentifierExpr) {
-        return false;
+        System.out.println(sqlIdentifierExpr.getName());
+        return true;
     }
     
     @Override
     public boolean visit(SQLInListExpr sqlInListExpr) {
-        return false;
+        System.out.println(sqlInListExpr);
+        return true;
     }
     
     @Override
     public boolean visit(SQLIntegerExpr sqlIntegerExpr) {
-        return false;
+        System.out.println(sqlIntegerExpr);
+        return true;
     }
     
     @Override
     public boolean visit(SQLNCharExpr sqlnCharExpr) {
-        return false;
+        System.out.println(sqlnCharExpr);
+        return true;
     }
     
     @Override
     public boolean visit(SQLNotExpr sqlNotExpr) {
-        return false;
+        System.out.println(sqlNotExpr);
+        return true;
     }
     
     @Override
     public boolean visit(SQLNullExpr sqlNullExpr) {
-        return false;
+        System.out.println(sqlNullExpr);
+        return true;
     }
     
     @Override
     public boolean visit(SQLNumberExpr sqlNumberExpr) {
-        return false;
+        System.out.println(sqlNumberExpr);
+        return true;
     }
     
     @Override
     public boolean visit(SQLPropertyExpr sqlPropertyExpr) {
-        return false;
+        System.out.println(sqlPropertyExpr);
+        return true;
     }
     
     @Override
     public boolean visit(SQLSelectGroupByClause sqlSelectGroupByClause) {
-        return false;
+        System.out.println(sqlSelectGroupByClause);
+        return true;
     }
     
     @Override
     public boolean visit(SQLSelectItem sqlSelectItem) {
-        return false;
+        System.out.println(sqlSelectItem);
+        return true;
     }
     
     @Override
     public boolean visit(SQLSelectStatement sqlSelectStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAggregateExpr x) {
-    
+        System.out.println(x);
         
-        return false;
+        return true;
     }
     
     @Override
-    public boolean visit(SQLVariantRefExpr sqlVariantRefExpr) {
-        return false;
+    public boolean visit(SQLVariantRefExpr x) {
+        System.out.println(x);
+        return true;
     }
     
     @Override
-    public boolean visit(SQLQueryExpr sqlQueryExpr) {
-        return false;
+    public boolean visit(SQLQueryExpr x) {
+        System.out.println(x);
+        return true;
     }
     
     @Override
     public boolean visit(SQLUnaryExpr sqlUnaryExpr) {
-        return false;
+        System.out.println(sqlUnaryExpr);
+        return true;
     }
     
     @Override
     public boolean visit(SQLHexExpr sqlHexExpr) {
-        return false;
+        System.out.println(sqlHexExpr);
+        return true;
     }
     
     @Override
     public boolean visit(SQLSelect sqlSelect) {
-        return false;
+    
+        final SQLSelectQuery query = sqlSelect.getQuery();
+        if (query instanceof MySqlSelectQueryBlock) {
+            return validateSelectQueryBlock((MySqlSelectQueryBlock) query);
+        }
+        
+        System.out.println(sqlSelect);
+        return true;
+    }
+    
+    private boolean validateSelectQueryBlock(SQLSelectQueryBlock sqlSelectQueryBlock) {
+        
+        if (Objects.isNull(sqlSelectQueryBlock.getWhere()) && Objects.isNull(sqlSelectQueryBlock.getLimit())) {
+            boolean hasCnt = false;
+            final List<SQLSelectItem> selectList = sqlSelectQueryBlock.getSelectList();
+            for (SQLSelectItem item : selectList) {
+            
+                if (SQL_COUNT_EXPRESSION.equalsIgnoreCase(item.getExpr().toString())) {
+                    hasCnt = true;
+                    break;
+                }
+            }
+        
+            if (!hasCnt && getSqlValidatorProperties().getMySqlValidItems().isEnableWhereCheck()) {
+                addViolation(new Violation(SQL9003));
+                return false;
+            }
+        }
+    
+        return true;
     }
     
     @Override
     public boolean visit(SQLSelectQueryBlock sqlSelectQueryBlock) {
-        return false;
+       return validateSelectQueryBlock(sqlSelectQueryBlock);
     }
     
     @Override
     public boolean visit(SQLExprTableSource sqlExprTableSource) {
-        return false;
+        System.out.println(sqlExprTableSource);
+        return true;
     }
     
     @Override
     public boolean visit(SQLOrderBy sqlOrderBy) {
-        return false;
+        System.out.println(sqlOrderBy);
+        return true;
     }
     
     @Override
     public boolean visit(SQLSelectOrderByItem sqlSelectOrderByItem) {
-        return false;
+        System.out.println(sqlSelectOrderByItem);
+        return true;
     }
     
     @Override
     public boolean visit(SQLDropTableStatement sqlDropTableStatement) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLCreateTableStatement sqlCreateTableStatement) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLColumnDefinition sqlColumnDefinition) {
-        return false;
+        System.out.println(sqlColumnDefinition);
+        return true;
     }
     
     @Override
     public boolean visit(SQLColumnDefinition.Identity identity) {
-        return false;
+        System.out.println(identity);
+        return true;
     }
     
     @Override
     public boolean visit(SQLDataType sqlDataType) {
-        return false;
+        System.out.println(sqlDataType);
+        return true;
     }
     
     @Override
     public boolean visit(SQLCharacterDataType sqlCharacterDataType) {
-        return false;
+        System.out.println(sqlCharacterDataType);
+        return true;
     }
     
     @Override
     public boolean visit(SQLDeleteStatement sqlDeleteStatement) {
-        return false;
+        System.out.println(sqlDeleteStatement);
+        return true;
     }
     
     @Override
     public boolean visit(SQLCurrentOfCursorExpr sqlCurrentOfCursorExpr) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLInsertStatement sqlInsertStatement) {
-        return false;
+        System.out.println(sqlInsertStatement);
+        return true;
     }
     
     @Override
     public boolean visit(SQLInsertStatement.ValuesClause valuesClause) {
-        return false;
+        System.out.println(valuesClause);
+        return true;
     }
     
     @Override
     public boolean visit(SQLUpdateSetItem sqlUpdateSetItem) {
-        return false;
+        System.out.println(sqlUpdateSetItem);
+        return true;
     }
     
     @Override
     public boolean visit(SQLUpdateStatement sqlUpdateStatement) {
-        return false;
+        System.out.println(sqlUpdateStatement);
+        return true;
     }
     
     @Override
     public boolean visit(SQLCreateViewStatement sqlCreateViewStatement) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLCreateViewStatement.Column column) {
-        return false;
+        System.out.println(column);
+        return true;
     }
     
     @Override
     public boolean visit(SQLNotNullConstraint sqlNotNullConstraint) {
-        return false;
+        System.out.println(sqlNotNullConstraint);
+        return true;
     }
     
     @Override
     public boolean visit(SQLMethodInvokeExpr sqlMethodInvokeExpr) {
-        return false;
+        System.out.println(sqlMethodInvokeExpr);
+        return true;
     }
     
     @Override
     public boolean visit(SQLUnionQuery sqlUnionQuery) {
-        return false;
+        System.out.println(sqlUnionQuery);
+        return true;
     }
     
     @Override
     public boolean visit(SQLSetStatement sqlSetStatement) {
-        return false;
+        System.out.println(sqlSetStatement);
+        return true;
     }
     
     @Override
     public boolean visit(SQLAssignItem sqlAssignItem) {
-        return false;
+        System.out.println(sqlAssignItem);
+        return true;
     }
     
     @Override
     public boolean visit(SQLCallStatement sqlCallStatement) {
-        return false;
+        System.out.println(sqlCallStatement);
+        return true;
     }
     
     @Override
     public boolean visit(SQLJoinTableSource sqlJoinTableSource) {
-        return false;
+        System.out.println(sqlJoinTableSource);
+        return true;
     }
     
     @Override
     public boolean visit(SQLSomeExpr sqlSomeExpr) {
-        return false;
+        System.out.println(sqlSomeExpr);
+        return true;
     }
     
     @Override
     public boolean visit(SQLAnyExpr sqlAnyExpr) {
-        return false;
+        System.out.println(sqlAnyExpr);
+        return true;
     }
     
     @Override
     public boolean visit(SQLAllExpr sqlAllExpr) {
-        return false;
+        System.out.println(sqlAllExpr);
+        return true;
     }
     
     @Override
     public boolean visit(SQLInSubQueryExpr sqlInSubQueryExpr) {
+        if (getSqlValidatorProperties().getMySqlValidItems().isEnableSqlInSubQuery()) {
+            return true;
+        }
+        
+        System.out.println(sqlInSubQueryExpr);
+        addViolation(new Violation(SQL9000));
         return false;
     }
     
     @Override
     public boolean visit(SQLListExpr sqlListExpr) {
-        return false;
+        System.out.println(sqlListExpr);
+        return true;
     }
     
     @Override
     public boolean visit(SQLSubqueryTableSource sqlSubqueryTableSource) {
-        return false;
+        System.out.println(sqlSubqueryTableSource);
+        final SQLSelectQuery query = sqlSubqueryTableSource.getSelect().getQuery();
+        if (query instanceof MySqlSelectQueryBlock) {
+            return validateSelectQueryBlock((MySqlSelectQueryBlock) query);
+        }
+        sqlSubqueryTableSource.getSelect();
+        return true;
     }
     
     @Override
     public boolean visit(SQLTruncateStatement sqlTruncateStatement) {
-        return false;
+        System.out.println(sqlTruncateStatement);
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLDefaultExpr sqlDefaultExpr) {
-        return false;
+        System.out.println(sqlDefaultExpr);
+        return true;
     }
     
     @Override
     public boolean visit(SQLCommentStatement sqlCommentStatement) {
-        return false;
+        System.out.println(sqlCommentStatement);
+        return true;
     }
     
     @Override
     public boolean visit(SQLUseStatement sqlUseStatement) {
-        return false;
+        System.out.println(sqlUseStatement);
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableAddColumn sqlAlterTableAddColumn) {
-        return false;
+        System.out.println(sqlAlterTableAddColumn);
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableDropColumnItem sqlAlterTableDropColumnItem) {
-        return false;
+        System.out.println(sqlAlterTableDropColumnItem);
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableDropIndex sqlAlterTableDropIndex) {
-        return false;
+        System.out.println(sqlAlterTableDropIndex);
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLDropIndexStatement sqlDropIndexStatement) {
-        return false;
+        System.out.println(sqlDropIndexStatement);
+       return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLDropViewStatement sqlDropViewStatement) {
-        return false;
+        System.out.println(sqlDropViewStatement);
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLSavePointStatement sqlSavePointStatement) {
-        return false;
+        System.out.println(sqlSavePointStatement);
+        return true;
     }
     
     @Override
     public boolean visit(SQLRollbackStatement sqlRollbackStatement) {
-        return false;
+        System.out.println(sqlRollbackStatement);
+        return true;
     }
     
     @Override
     public boolean visit(SQLReleaseSavePointStatement sqlReleaseSavePointStatement) {
-        return false;
+        System.out.println();
+        return true;
     }
     
     @Override
     public boolean visit(SQLCommentHint sqlCommentHint) {
-        return false;
+        System.out.println();
+        return true;
     }
     
     @Override
     public boolean visit(SQLCreateDatabaseStatement sqlCreateDatabaseStatement) {
-        return false;
+        System.out.println(sqlCreateDatabaseStatement);
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLOver sqlOver) {
-        return false;
+        System.out.println(sqlOver);
+        return true;
     }
     
     @Override
     public boolean visit(SQLKeep sqlKeep) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLColumnPrimaryKey sqlColumnPrimaryKey) {
-        return false;
+        System.out.println(sqlColumnPrimaryKey);
+        return true;
     }
     
     @Override
     public boolean visit(SQLColumnUniqueKey sqlColumnUniqueKey) {
-        return false;
+        System.out.println(sqlColumnUniqueKey);
+        return true;
     }
     
     @Override
     public boolean visit(SQLWithSubqueryClause sqlWithSubqueryClause) {
-        return false;
+        System.out.println(sqlWithSubqueryClause);
+        return true;
     }
     
     @Override
     public boolean visit(SQLWithSubqueryClause.Entry entry) {
-        return false;
+        System.out.println(entry);
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableAlterColumn sqlAlterTableAlterColumn) {
-        return false;
+    
+        System.out.println(sqlAlterTableAlterColumn);
+        return true;
     }
     
     @Override
     public boolean visit(SQLCheck sqlCheck) {
-        return false;
+        System.out.println(sqlCheck);
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableDropForeignKey sqlAlterTableDropForeignKey) {
-        return false;
+    
+        System.out.println(sqlAlterTableDropForeignKey);
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableDropPrimaryKey sqlAlterTableDropPrimaryKey) {
-        return false;
+        System.out.println(sqlAlterTableDropPrimaryKey);
+        return enabledDdlStatement();
     }
+    
     
     @Override
     public boolean visit(SQLAlterTableDisableKeys sqlAlterTableDisableKeys) {
-        return false;
+        System.out.println(sqlAlterTableDisableKeys);
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableEnableKeys sqlAlterTableEnableKeys) {
-        return false;
+        System.out.println(sqlAlterTableEnableKeys);
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableStatement sqlAlterTableStatement) {
-        return false;
+        
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableDisableConstraint sqlAlterTableDisableConstraint) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableEnableConstraint sqlAlterTableEnableConstraint) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLColumnCheck sqlColumnCheck) {
-        return false;
+        System.out.println(sqlColumnCheck);
+        return true;
     }
     
     @Override
     public boolean visit(SQLExprHint sqlExprHint) {
-        return false;
+        System.out.println(sqlExprHint);
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableDropConstraint sqlAlterTableDropConstraint) {
-        return false;
+        System.out.println(sqlAlterTableDropConstraint);
+        return true;
     }
     
     @Override
     public boolean visit(SQLUnique sqlUnique) {
-        return false;
+        System.out.println(sqlUnique);
+        return true;
     }
     
     @Override
     public boolean visit(SQLPrimaryKeyImpl sqlPrimaryKey) {
-        return false;
+        System.out.println(sqlPrimaryKey);
+        return true;
     }
     
     @Override
     public boolean visit(SQLCreateIndexStatement sqlCreateIndexStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableRenameColumn sqlAlterTableRenameColumn) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLColumnReference sqlColumnReference) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLForeignKeyImpl sqlForeignKey) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLDropSequenceStatement sqlDropSequenceStatement) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLDropTriggerStatement sqlDropTriggerStatement) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLDropUserStatement sqlDropUserStatement) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLExplainStatement sqlExplainStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLGrantStatement sqlGrantStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLDropDatabaseStatement sqlDropDatabaseStatement) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableAddIndex sqlAlterTableAddIndex) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableAddConstraint sqlAlterTableAddConstraint) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLCreateTriggerStatement sqlCreateTriggerStatement) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLDropFunctionStatement sqlDropFunctionStatement) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLDropTableSpaceStatement sqlDropTableSpaceStatement) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLDropProcedureStatement sqlDropProcedureStatement) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLBooleanExpr sqlBooleanExpr) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLUnionQueryTableSource sqlUnionQueryTableSource) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLTimestampExpr sqlTimestampExpr) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLRevokeStatement sqlRevokeStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLBinaryExpr sqlBinaryExpr) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableRename sqlAlterTableRename) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterViewRenameStatement sqlAlterViewRenameStatement) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLShowTablesStatement sqlShowTablesStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableAddPartition sqlAlterTableAddPartition) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableDropPartition sqlAlterTableDropPartition) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableRenamePartition sqlAlterTableRenamePartition) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableSetComment sqlAlterTableSetComment) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableSetLifecycle sqlAlterTableSetLifecycle) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableEnableLifecycle sqlAlterTableEnableLifecycle) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableDisableLifecycle sqlAlterTableDisableLifecycle) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableTouch sqlAlterTableTouch) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLArrayExpr sqlArrayExpr) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLOpenStatement sqlOpenStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLFetchStatement sqlFetchStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLCloseStatement sqlCloseStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLGroupingSetExpr sqlGroupingSetExpr) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLIfStatement sqlIfStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLIfStatement.ElseIf elseIf) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLIfStatement.Else anElse) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLLoopStatement sqlLoopStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLParameter sqlParameter) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLCreateProcedureStatement sqlCreateProcedureStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLCreateFunctionStatement sqlCreateFunctionStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLBlockStatement sqlBlockStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableDropKey sqlAlterTableDropKey) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLDeclareItem sqlDeclareItem) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLPartitionValue sqlPartitionValue) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLPartition sqlPartition) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLPartitionByRange sqlPartitionByRange) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLPartitionByHash sqlPartitionByHash) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLPartitionByList sqlPartitionByList) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLSubPartition sqlSubPartition) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLSubPartitionByHash sqlSubPartitionByHash) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLSubPartitionByList sqlSubPartitionByList) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterDatabaseStatement sqlAlterDatabaseStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableConvertCharSet sqlAlterTableConvertCharSet) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableReOrganizePartition sqlAlterTableReOrganizePartition) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableCoalescePartition sqlAlterTableCoalescePartition) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableTruncatePartition sqlAlterTableTruncatePartition) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableDiscardPartition sqlAlterTableDiscardPartition) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableImportPartition sqlAlterTableImportPartition) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableAnalyzePartition sqlAlterTableAnalyzePartition) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableCheckPartition sqlAlterTableCheckPartition) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableOptimizePartition sqlAlterTableOptimizePartition) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableRebuildPartition sqlAlterTableRebuildPartition) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterTableRepairPartition sqlAlterTableRepairPartition) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLSequenceExpr sqlSequenceExpr) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLMergeStatement sqlMergeStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLMergeStatement.MergeUpdateClause mergeUpdateClause) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLMergeStatement.MergeInsertClause mergeInsertClause) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLErrorLoggingClause sqlErrorLoggingClause) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLNullConstraint sqlNullConstraint) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLCreateSequenceStatement sqlCreateSequenceStatement) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLDateExpr sqlDateExpr) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLLimit sqlLimit) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLStartTransactionStatement sqlStartTransactionStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLDescribeStatement sqlDescribeStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLWhileStatement sqlWhileStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLDeclareStatement sqlDeclareStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLReturnStatement sqlReturnStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLArgument sqlArgument) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLCommitStatement sqlCommitStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLFlashbackExpr sqlFlashbackExpr) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLCreateMaterializedViewStatement sqlCreateMaterializedViewStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLBinaryOpExprGroup sqlBinaryOpExprGroup) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLScriptCommitStatement sqlScriptCommitStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLReplaceStatement sqlReplaceStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLCreateUserStatement sqlCreateUserStatement) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLAlterFunctionStatement sqlAlterFunctionStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTypeStatement sqlAlterTypeStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLIntervalExpr sqlIntervalExpr) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLLateralViewTableSource sqlLateralViewTableSource) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLShowErrorsStatement sqlShowErrorsStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterCharacter sqlAlterCharacter) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLExprStatement sqlExprStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterProcedureStatement sqlAlterProcedureStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterViewStatement sqlAlterViewStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLDropEventStatement sqlDropEventStatement) {
-        return false;
+        return enabledDdlStatement();
     }
     
     @Override
     public boolean visit(SQLDropLogFileGroupStatement sqlDropLogFileGroupStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLDropServerStatement sqlDropServerStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLDropSynonymStatement sqlDropSynonymStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLRecordDataType sqlRecordDataType) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLDropTypeStatement sqlDropTypeStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLExternalRecordFormat sqlExternalRecordFormat) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLArrayDataType sqlArrayDataType) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLMapDataType sqlMapDataType) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLStructDataType sqlStructDataType) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLStructDataType.Field field) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLDropMaterializedViewStatement sqlDropMaterializedViewStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableRenameIndex sqlAlterTableRenameIndex) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterSequenceStatement sqlAlterSequenceStatement) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLAlterTableExchangePartition sqlAlterTableExchangePartition) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLValuesExpr sqlValuesExpr) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLValuesTableSource sqlValuesTableSource) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLContainsExpr sqlContainsExpr) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLRealExpr sqlRealExpr) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLWindow sqlWindow) {
-        return false;
+        return true;
     }
     
     @Override
     public boolean visit(SQLDumpStatement sqlDumpStatement) {
-        return false;
+        return true;
     }
 }
