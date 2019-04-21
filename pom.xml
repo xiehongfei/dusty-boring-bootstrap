@@ -22,6 +22,7 @@
         <module>springboot-dusty-elastic-job-starter</module>
         <module>springboot-dusty-elastic-job-demo</module>
         <module>springboot-dusty-mybatis-sql-validator</module>
+        <module>springboot-dusty-mybatis-sql-validator-demo</module>
     </modules>
 
     <parent>

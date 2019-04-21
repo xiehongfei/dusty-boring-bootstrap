@@ -75,14 +75,22 @@ public class SqlValidatorProperties {
         
         @MetaData(value = "黑名单启用环境")
         private List<String> enableBlackListCacheEnvs = Lists.newArrayList(Arrays.asList("dev", "test", "rc"));
-        
+    
+    
+        /**
+         * <pre>
+         *     是否启用黑名单本地缓存
+         *
+         * @return boolean
+         *           - true : 启用
+         *           - false: 禁用
+         * </pre>
+         */
         public boolean enableBlackListCache() {
-            
-            if (Objects.isNull(enableBlackListCacheEnvs) || CollectionUtils.isEmpty(enableBlackListCacheEnvs)) {
-                return false;
-            }
-            
-            return enableBlackListCacheEnvs.contains(SpringContextHolder.getEnvironment());
+    
+            return  CollectionUtils.isNotEmpty(enableBlackListCacheEnvs)
+                    && enableBlackListCacheEnvs.contains(SpringContextHolder.getEnvironment());
+    
         }
     }
     
@@ -148,6 +156,16 @@ public class SqlValidatorProperties {
                     isEnableLikeCond(), isEnableCondNE(),
                     isEnableWhereCheck(), isMustUseIndexCheck()));
         }
+        
+    }
+    
+    @Getter
+    @Setter
+    @MetaData(value = "Oracle检查项")
+    public static class OracleValidateItems extends ValidateItems {
+    
+        private static final long serialVersionUID = 8188531298637534230L;
+        
         
     }
     

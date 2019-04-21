@@ -16,6 +16,7 @@ import com.dusty.boring.mybatis.sql.validater.SqlValidateResult;
 import com.dusty.boring.mybatis.sql.validater.provider.AbstractSqlValidateProvider;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * <pre>
@@ -54,6 +55,16 @@ public class OracleValidateVisitor extends SqlValidateVisitorAdapter {
     @Override
     public void addViolation(SqlValidateResult.Violation violation) {
     
+    }
+    
+    @Override
+    public Map<String, SqlValidateResult.TableInfo> getTables() {
+        return null;
+    }
+    
+    @Override
+    public Map<String, SqlValidateResult.TableR2Column> getColumns() {
+        return null;
     }
     
     @Override

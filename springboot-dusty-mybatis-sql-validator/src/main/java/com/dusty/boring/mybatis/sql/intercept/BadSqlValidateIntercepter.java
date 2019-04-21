@@ -16,16 +16,13 @@ import com.dusty.boring.mybatis.sql.common.context.SpringContextHolder;
 import com.dusty.boring.mybatis.sql.common.exception.IllegalSqlValidateException;
 import com.dusty.boring.mybatis.sql.common.pool.SqlErrorCodeEnum;
 import com.dusty.boring.mybatis.sql.common.utils.EncryptUtils;
+import com.dusty.boring.mybatis.sql.validater.SqlValidateResult;
+import com.dusty.boring.mybatis.sql.validater.provider.AbstractSqlValidateProvider;
 import com.dusty.boring.mybatis.sql.validater.provider.MySqlValidateProvider;
 import com.dusty.boring.mybatis.sql.validater.provider.OracleValidateProvider;
-import com.dusty.boring.mybatis.sql.validater.provider.AbstractSqlValidateProvider;
-import com.dusty.boring.mybatis.sql.validater.SqlValidateResult;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import lombok.extern.slf4j.Slf4j;
-import net.sf.jsqlparser.schema.Table;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.mapping.BoundSql;
@@ -40,11 +37,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
-import java.sql.ResultSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import static com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool.*;
@@ -87,6 +80,9 @@ public class BadSqlValidateIntercepter implements Interceptor {
     
     @MetaData(value = "索引信息缓存")
     public static LocalLRUCache<String, List<DbiData>> dbiDataList;
+    
+    @MetaData(value = "索引信息", note = "用于替换dibDataList")
+    public static LocalLRUCache<String, Map<String, String>> dbiDataCache;
     
     @MetaData(value = "检查黑名单", note = "已知未通过检查的sql")
     public static LocalLRUCache<String, SqlValidateResult> blackSqlList;
@@ -163,7 +159,7 @@ public class BadSqlValidateIntercepter implements Interceptor {
             }
     
             AbstractSqlValidateProvider sqlValidateProvider = getSqlValidateProvider(dbTypeName);
-            final SqlValidateResult validateResult = sqlValidateProvider.validateSqlWithResult(toExecSql, encryptedSql);
+            final SqlValidateResult validateResult = sqlValidateProvider.validateSqlWithResult(toExecSql, encryptedSql, conn);
             if (Objects.nonNull(validateResult) && validateResult.getViolations().size() > 0) {
                 //验证不通过
                 throw IllegalSqlValidateException
@@ -336,61 +332,6 @@ public class BadSqlValidateIntercepter implements Interceptor {
         Assert.notNull(sqlValidateProvider, "SqlValidateProvide不能为空！");
         
         return sqlValidateProvider;
-    }
-    
-    /**
-     * <pre>
-     *     根据表信息获取索引集
-     *
-     * @param conn          conn
-     * @param table         table信息
-     * @return              List<DbiData> 索引信息集
-     * @throws Throwable
-     * </pre>
-     */
-    private static List<DbiData> getDbiDatasByTableInfo(Connection conn, Table table)  throws Throwable {
-        
-        final String dbAndTbName = table.getName();
-        String[] nameArr = StringUtils.split(dbAndTbName, ".");
-        String dbName = nameArr.length == 1 ? null : nameArr[0];
-        String tbName = nameArr.length == 1 ? nameArr[0] : nameArr[1];
-        
-        List<DbiData> dbiDatas = dbiDataList.get(tbName);
-        
-        if (Objects.isNull(dbiDatas)) {
-            dbiDatas = Lists.newArrayList();
-            
-            //unique:是否只获取unique, approximate:是否精确拉取
-            final DatabaseMetaData metaData = conn.getMetaData();
-            final ResultSet indexInfo = metaData.getIndexInfo(dbName, dbName, tbName, false, false);
-            //final ResultSetMetaData indexMetaData = indexInfo.getMetaData();
-            DbiData dbiData;
-            while (indexInfo.next()) {
-                if ("1".equals(indexInfo.getString("ORDINAL_POSITION"))) {
-                    dbiData = new DbiData();
-                    dbiData.setTableCat(indexInfo.getString("TABLE_CAT"));
-                    dbiData.setTableSchem(indexInfo.getString("TABLE_SCHEM"));
-                    dbiData.setTableName(indexInfo.getString("TABLE_NAME"));
-                    dbiData.setUnique(!indexInfo.getBoolean("NON_UNIQUE"));
-                    dbiData.setIndexQualifier(indexInfo.getString("INDEX_QUALIFIER"));
-                    dbiData.setIndexName(indexInfo.getString("INDEX_NAME"));
-                    dbiData.setIndexType(indexInfo.getInt("TYPE"));
-                    dbiData.setSeqInIndex(indexInfo.getString("ORDINAL_POSITION"));
-                    dbiData.setColumnName(indexInfo.getString("COLUMN_NAME"));
-                    dbiData.setAscOrDesc(indexInfo.getString("ASC_OR_DESC"));
-                    dbiData.setCardinality(indexInfo.getString("CARDINALITY"));
-                    dbiData.setPages(indexInfo.getString("PAGES"));
-                    dbiDatas.add(dbiData);
-                }
-            }
-            
-            //放入本地LRU缓存
-            if (CollectionUtils.isNotEmpty(dbiDatas))
-                dbiDataList.put(tbName, dbiDatas);
-            
-        }
-        
-        return dbiDatas;
     }
     
 }

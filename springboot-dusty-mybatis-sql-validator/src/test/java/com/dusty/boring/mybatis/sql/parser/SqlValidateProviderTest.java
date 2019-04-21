@@ -11,16 +11,15 @@ package com.dusty.boring.mybatis.sql.parser;
 import com.alibaba.druid.sql.SQLUtils;
 import com.alibaba.druid.sql.ast.SQLStatement;
 import com.alibaba.druid.sql.dialect.mysql.parser.MySqlStatementParser;
-import com.alibaba.druid.support.json.JSONUtils;
 import com.dusty.boring.mybatis.sql.autoconfig.SqlValidatorProperties;
 import com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool;
 import com.dusty.boring.mybatis.sql.validater.SqlValidateResult;
+import com.dusty.boring.mybatis.sql.validater.SqlValidateUtils;
 import com.dusty.boring.mybatis.sql.validater.provider.MySqlValidateProvider;
 import com.dusty.boring.mybatis.sql.validater.visitor.MySqlValidateVisitor;
 import junit.framework.TestCase;
 
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * <pre>
@@ -40,12 +39,12 @@ public class SqlValidateProviderTest extends TestCase {
         
         String sql = "select * from t_label t where t.label_id and t.id between 2 and 4";
         //sql = "drop table t_label";
-        sql = "select * from t_label";
+       // sql = "select t.* from t_label t where 1=1";
         sql = "SELECT      distinct a.id \"id\",    a.col \"col\",     a.position \"position\",     a.panel_id \"panelId\"    "
-                + "FROM     (select * from view_position_info) a LEFT JOIN db1.view_portal b ON a.panel_id = b.panel_id     "
-                + "  LEFT JOIN (select * from view_portal_panel) c  ON a.panel_id = c.panel_id   "
+                + "FROM     (select * from db1.view_position_info) a LEFT JOIN db1.view_portal b ON a.panel_id = b.panel_id     "
+                + "  LEFT JOIN (select * from db1.view_portal_panel) c  ON a.panel_id = c.panel_id   "
                 + " WHERE     b.user_id = ? and     ((b.is_grid='y' and c.param_name='is_hidden' and c.param_value='false') or " +
-                "     b.is_grid  != 'y') and b.user_id in (select user_id from table1 where id = 1)    ORDER BY    a.col ASC, a.position ASC";
+                "     b.is_grid  != 'y') and b.user_id in (select user_id from db1.table1 where id = 1)    ORDER BY    a.col ASC, a.position ASC";
         
 //        sql = "delete from t_label";
 //        sql = "update scheme.table set col_1 = 1, col2 = '2'";
@@ -83,10 +82,28 @@ public class SqlValidateProviderTest extends TestCase {
         if (Objects.nonNull(visitor.getViolations()) && visitor.getViolations().size() > 0) {
            
             for (SqlValidateResult.Violation violation : visitor.getViolations()) {
-                System.out.println(String.format("\n-\t拦截结果:\t%s-%s", violation.getErrorCode(), violation.getMessage()));
+                System.out.println(String.format("\n-\t拦截结果:\t%s-%s-%s", violation.getErrorCode(), violation.getMessage(), violation.getSql()));
             }
         }
-        
+    
+        System.out.println(String.format("\n-\t拦截表信息:%s-%s", visitor.getTables(), visitor.getColumns()));
+    
+        final Map<String, SqlValidateResult.TableInfo> tables = visitor.getTables();
+        final Iterator<String> iterator = visitor.getTables().keySet().iterator();
+        while (iterator.hasNext()) {
+            final SqlValidateResult.TableInfo tableInfo = tables.get(iterator.next());
+            System.out.println(String.format("\n-\t信息:%s - %s - %s - %s",
+                    tableInfo.getTableAliasName(), tableInfo.getTableName(),tableInfo.getTableType(), tableInfo.getOwner()));
+        }
+    
+        final Iterator<String> columnIterator = visitor.getColumns().keySet().iterator();
+        final Map<String, SqlValidateResult.TableR2Column> columns = visitor.getColumns();
+        System.out.println("\t——— 列名 ———\t———  操作 ———\t——— 表名 ———");
+        while (columnIterator.hasNext()) {
+            final SqlValidateResult.TableR2Column tableR2Column = columns.get(columnIterator.next());
+            System.out.println(String.format("\t%s\t%s\t%s  %s", tableR2Column.getColumnName(), tableR2Column.getOperator(), tableR2Column.getTableAliasName(), tableR2Column.getTableName()));
+        }
+    
         SQLUtils.parseStatements(sql, MyBatisConstPool.DbTypeEnum.MySql.name());
     }
     

@@ -62,6 +62,13 @@ public enum SqlErrorCodeEnum implements EnumKeyLabelPair {
         public String getLabel() {
             return "禁止无Where条件的更新操作";
         }
+    },
+    
+    SQL9006 {
+        @Override
+        public String getLabel() {
+            return "禁止执行未使用索引的查询语句";
+        }
     }
     
 }

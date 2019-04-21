@@ -13,6 +13,8 @@ import com.dusty.boring.mybatis.sql.autoconfig.SqlValidatorProperties;
 import com.dusty.boring.mybatis.sql.common.annotation.MetaData;
 
 import java.util.List;
+import java.util.Map;
+
 import com.dusty.boring.mybatis.sql.validater.SqlValidateResult.*;
 import com.dusty.boring.mybatis.sql.validater.provider.AbstractSqlValidateProvider;
 
@@ -44,4 +46,9 @@ public interface SqlValidateVisitor extends SQLASTVisitor {
     @MetaData(value = "增加Violation")
     void addViolation(Violation violation);
     
+    @MetaData(value = "获取表信息")
+    Map<String, TableInfo> getTables();
+    
+    @MetaData(value = "获取表列信息")
+    Map<String, TableR2Column> getColumns();
 }

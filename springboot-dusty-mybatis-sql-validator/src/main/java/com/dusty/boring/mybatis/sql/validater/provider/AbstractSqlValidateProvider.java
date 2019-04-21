@@ -8,14 +8,7 @@
  */
 package com.dusty.boring.mybatis.sql.validater.provider;
 
-import com.alibaba.druid.sql.ast.SQLExpr;
-import com.alibaba.druid.sql.ast.SQLLimit;
 import com.alibaba.druid.sql.ast.SQLStatement;
-import com.alibaba.druid.sql.ast.statement.SQLDeleteStatement;
-import com.alibaba.druid.sql.ast.statement.SQLSelectQuery;
-import com.alibaba.druid.sql.ast.statement.SQLSelectStatement;
-import com.alibaba.druid.sql.ast.statement.SQLUpdateStatement;
-import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlSelectQueryBlock;
 import com.alibaba.druid.sql.dialect.mysql.parser.MySqlStatementParser;
 import com.alibaba.druid.sql.parser.SQLParserFeature;
 import com.alibaba.druid.sql.parser.SQLStatementParser;
@@ -23,23 +16,25 @@ import com.dusty.boring.mybatis.sql.autoconfig.SqlValidatorProperties;
 import com.dusty.boring.mybatis.sql.common.annotation.MetaData;
 import com.dusty.boring.mybatis.sql.common.cache.LocalLRUCache;
 import com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool;
+import com.dusty.boring.mybatis.sql.common.pool.SqlErrorCodeEnum;
 import com.dusty.boring.mybatis.sql.validater.SqlValidateResult;
 import com.dusty.boring.mybatis.sql.validater.SqlValidateUtils;
 import com.dusty.boring.mybatis.sql.validater.visitor.SqlValidateVisitor;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.springframework.util.Assert;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.sql.Connection;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool.ZERO;
 import static com.dusty.boring.mybatis.sql.intercept.BadSqlValidateIntercepter.*;
+import static com.dusty.boring.mybatis.sql.validater.SqlValidateResult.*;
 
 /**
  * <pre>
@@ -83,12 +78,13 @@ public abstract class AbstractSqlValidateProvider {
      *
      * @param   sql      带校验的sql语句
      * @param   cacheKey 缓存key（sql语句清洗后加密内容）
+     * @param   conn     数据库链接
      * @return  校验结果
      * </pre>
      */
-    public boolean validateSql(String sql, String cacheKey) {
+    public boolean validateSql(String sql, String cacheKey, Connection conn) throws Throwable {
         
-        final SqlValidateResult result = validateSqlWithResult(sql, cacheKey);
+        final SqlValidateResult result = validateSqlWithResult(sql, cacheKey, conn);
         return Objects.isNull(result) || ZERO.equals(result.getViolations().size());
     }
     
@@ -102,22 +98,20 @@ public abstract class AbstractSqlValidateProvider {
      * @return   sql质量检查结果
      * </pre>
      */
-    public SqlValidateResult validateSqlWithResult(String sql, String cacheKey) {
+    public SqlValidateResult validateSqlWithResult(String sql, String cacheKey, Connection conn) throws Throwable {
     
         final MySqlStatementParser mySqlStatementParser =
                                   new MySqlStatementParser(sql, SQLParserFeature.EnableSQLBinaryOpExprGroup, SQLParserFeature.StrictForWall);
         
         final List<SQLStatement> sqlStatements = mySqlStatementParser.parseStatementList();
-        
         Assert.isTrue(Objects.nonNull(sqlStatements) && sqlStatements.size() == 1, "sqlStatements size != 1");
         
-        SQLExpr where = null;
         final SQLStatement sqlStatement = sqlStatements.get(0);
         final SqlValidateVisitor validateVisitor = createValidateVisitor();
         //执行pre检查(主要检查语法类型是否合法。如：是否ddl语句等校验)
         SqlValidateUtils.preVisitCheck(validateVisitor, sqlStatement);
         
-        List<SqlValidateResult.Violation> violations = validateVisitor.getViolations();
+        List<Violation> violations = validateVisitor.getViolations();
         
         if (CollectionUtils.isNotEmpty(violations)) {
             
@@ -125,23 +119,62 @@ public abstract class AbstractSqlValidateProvider {
             
             addBlackSql(cacheKey, validateResult);
             return validateResult;
-            
-        } else if (sqlStatement instanceof SQLSelectStatement) {
-            //查询
-            final SQLSelectQuery sqlQuery = ((SQLSelectStatement) sqlStatement).getSelect().getQuery();
-            if (sqlQuery instanceof MySqlSelectQueryBlock) {
-                where = ((MySqlSelectQueryBlock) sqlQuery).getWhere();
-                final SQLLimit limit = ((MySqlSelectQueryBlock) sqlQuery).getLimit();
-            }
-        } else if (sqlStatement instanceof SQLUpdateStatement) {
-            //更新
-            where = ((SQLUpdateStatement) sqlStatement).getWhere();
-        } else if (sqlStatement instanceof SQLDeleteStatement) {
-            //删除
-            where = ((SQLDeleteStatement) sqlStatement).getWhere();
+        }
+    
+        //~~ 检查是否使用索引 ~~
+        final Map<String, TableInfo> tables      = validateVisitor.getTables();
+        final Map<String, TableR2Column> columns = validateVisitor.getColumns();
+        
+        if (getSqlValidatorProperties().getMySqlValidItems().isMustUseIndexCheck()
+                && MapUtils.isNotEmpty(tables)
+                && MapUtils.isNotEmpty(columns)
+                && !validateUseIndex(conn, tables.entrySet().iterator(), columns)) {
+    
+            violations = Lists.newArrayList();
+            violations.add(new Violation(SqlErrorCodeEnum.SQL9006, sql));
+        
+            final SqlValidateResult validateResult = new SqlValidateResult(sql, violations);
+            return addBlackSql(cacheKey, validateResult);
         }
     
         return new SqlValidateResult(sql);
+    }
+    
+    
+    /**
+     * <pre>
+     *     检查是否使用了索引查询
+     *
+     * @param conn
+     * @param tableInfoEntry
+     * @param columns
+     * @return
+     * @throws Throwable
+     * </pre>
+     */
+    public static boolean validateUseIndex(final Connection conn, final Iterator<Map.Entry<String, TableInfo>> tableInfoEntry, final Map<String, TableR2Column> columns) throws Throwable {
+    
+        boolean useIndex = false;
+        
+        while (tableInfoEntry.hasNext()) {
+            
+            final Map.Entry<String, TableInfo> tEntry = tableInfoEntry.next();
+            final TableInfo tableInfo = tEntry.getValue();
+            //获取索引信息
+            final Map<String, String> dbiDataCache = SqlValidateUtils.getDbiDatasFromCache(conn, tableInfo);
+            
+            if (MapUtils.isNotEmpty(columns)) {
+                for (Map.Entry<String, TableR2Column> cEntry : columns.entrySet()) {
+                    final TableR2Column column = cEntry.getValue();
+                    if (Objects.nonNull(dbiDataCache.get(column.getColumnName()))) {
+                        useIndex = true;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        return useIndex;
     }
     
     public static void main(String[] args) {
@@ -223,11 +256,11 @@ public abstract class AbstractSqlValidateProvider {
      * @param sqlValidateResult 检查结果（加黑原因）
      * </pre>
      */
-    public void addBlackSql(String cacheKey, SqlValidateResult sqlValidateResult) {
+    public SqlValidateResult addBlackSql(String cacheKey, SqlValidateResult sqlValidateResult) {
     
         //不启用黑名单缓存，则返回
         if (!sqlValidatorProperties.getEnvProfiles().enableBlackListCache()) {
-            return;
+            return sqlValidateResult;
         }
         
         //锁定，拉黑
@@ -242,7 +275,8 @@ public abstract class AbstractSqlValidateProvider {
         } finally {
             lock.writeLock().unlock();
         }
-    
+        
+        return sqlValidateResult;
     }
     
     public void clearCache() {
