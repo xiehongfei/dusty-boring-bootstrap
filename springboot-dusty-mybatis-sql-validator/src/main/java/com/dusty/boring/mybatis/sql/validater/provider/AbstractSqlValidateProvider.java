@@ -110,16 +110,23 @@ public abstract class AbstractSqlValidateProvider {
         final SqlValidateVisitor validateVisitor = createValidateVisitor();
         //执行pre检查(主要检查语法类型是否合法。如：是否ddl语句等校验)
         SqlValidateUtils.preVisitCheck(validateVisitor, sqlStatement);
-        
         List<Violation> violations = validateVisitor.getViolations();
+        
+        if (CollectionUtils.isEmpty(violations)) {
+            //解析AST，并获取执行结果
+            sqlStatement.accept(validateVisitor);
+            violations = validateVisitor.getViolations();
+        }
         
         if (CollectionUtils.isNotEmpty(violations)) {
             
             final SqlValidateResult validateResult = new SqlValidateResult(sql, violations);
-            
             addBlackSql(cacheKey, validateResult);
             return validateResult;
         }
+        
+        
+        
     
         //~~ 检查是否使用索引 ~~
         final Map<String, TableInfo> tables      = validateVisitor.getTables();

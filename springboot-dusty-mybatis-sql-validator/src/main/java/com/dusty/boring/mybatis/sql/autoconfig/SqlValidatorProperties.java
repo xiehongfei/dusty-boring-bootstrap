@@ -15,6 +15,8 @@ import com.google.common.primitives.Booleans;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -44,13 +46,13 @@ import static com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool.ZERO;
 public class SqlValidatorProperties {
     
     @MetaData(value = "环境标签项")
-    private EnvProfiles envProfiles;
+    private EnvProfiles envProfiles = new EnvProfiles();
     
 //    @MetaData(value = "检查项配置")
 //    private ValidateItems validateItems;
     
     @MetaData(value = "检查项配置")
-    private MySqlValidateItems mySqlValidItems;
+    private MySqlValidateItems mySqlValidItems = new MySqlValidateItems();
     
     @MetaData(value = "告警执行SQL时长", note = "超过warnWhenMills即告警，默认512毫秒")
     private long warnOverMills = 2 << 8;
@@ -150,11 +152,12 @@ public class SqlValidatorProperties {
         private boolean enableLockTable = false;
         
         public boolean anyItemsTrue() {
-    
-            return ZERO.equals(Booleans.countTrue(
-                    isEnableCondIn(), isEnableCondOr(),
-                    isEnableLikeCond(), isEnableCondNE(),
-                    isEnableWhereCheck(), isMustUseIndexCheck()));
+            return Booleans.contains(
+                    new boolean[]{
+                            isEnableCondIn(), isEnableCondOr(), isEnableLikeCond(),
+                            isEnableCondNE(), isEnableWhereCheck(), isMustUseIndexCheck(),
+                            isEnableDdl(), isEnableDdlDrop(), isEnableLockTable()},
+                    true);
         }
         
     }

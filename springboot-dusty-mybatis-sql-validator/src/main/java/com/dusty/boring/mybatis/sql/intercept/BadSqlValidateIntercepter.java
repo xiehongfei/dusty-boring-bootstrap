@@ -161,11 +161,12 @@ public class BadSqlValidateIntercepter implements Interceptor {
             AbstractSqlValidateProvider sqlValidateProvider = getSqlValidateProvider(dbTypeName);
             final SqlValidateResult validateResult = sqlValidateProvider.validateSqlWithResult(toExecSql, encryptedSql, conn);
             if (Objects.nonNull(validateResult) && validateResult.getViolations().size() > 0) {
+                final SqlValidateResult.Violation violation = validateResult.getViolations().get(0);
                 //验证不通过
                 throw IllegalSqlValidateException
                         .builder()
-                            .code(SqlErrorCodeEnum.SQL9000.name())
-                            .message(SqlErrorCodeEnum.SQL9000.getLabel())
+                            .code(violation.getErrorCode())
+                            .message(violation.getMessage())
                             .sqlInfo(validateResult.getSql())
                             .violations(validateResult.getViolations())
                         .build();
@@ -327,6 +328,8 @@ public class BadSqlValidateIntercepter implements Interceptor {
             sqlValidateProvider = SpringContextHolder.getBean(MySqlValidateProvider.class);
         } else if (DbTypeEnum.Oracle.equals(dbTypeEnum)) {
             sqlValidateProvider = SpringContextHolder.getBean(OracleValidateProvider.class);
+        } else if(DbTypeEnum.H2.equals(dbTypeEnum)) {
+            sqlValidateProvider = SpringContextHolder.getBean(MySqlValidateProvider.class);
         }
     
         Assert.notNull(sqlValidateProvider, "SqlValidateProvide不能为空！");

@@ -32,7 +32,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Order(1)
 @Component
-@ConditionalOnWebApplication
+//@ConditionalOnWebApplication
 public class SpringContextHoderInitalizer implements ApplicationContextAware {
     
     /**

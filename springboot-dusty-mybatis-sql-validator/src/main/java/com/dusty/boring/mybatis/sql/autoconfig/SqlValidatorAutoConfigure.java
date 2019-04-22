@@ -8,7 +8,10 @@
  */
 package com.dusty.boring.mybatis.sql.autoconfig;
 
+import com.dusty.boring.mybatis.sql.common.utils.JsonUtils;
 import com.dusty.boring.mybatis.sql.intercept.BadSqlValidateIntercepter;
+import com.dusty.boring.mybatis.sql.validater.provider.MySqlValidateProvider;
+import com.dusty.boring.mybatis.sql.validater.provider.OracleValidateProvider;
 import jdk.nashorn.internal.ir.debug.JSONWriter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.session.SqlSessionFactory;
@@ -50,7 +53,7 @@ public class SqlValidatorAutoConfigure {
     @PostConstruct
     public void autoConfigCheck() {
         
-        log.info("\n-\t 当前拦截器参数:{}", sqlValidatorProperties.toString());
+        log.info("\n-\t 当前拦截器参数:{}", JsonUtils.object2String(sqlValidatorProperties.toString()));
         
     }
     
@@ -68,6 +71,30 @@ public class SqlValidatorAutoConfigure {
     @Bean
     public BadSqlValidateIntercepter injectBadSqlValidateIntercepterHandler() {
         return new BadSqlValidateIntercepter();
+    }
+    
+    /**
+     * <pre>
+     *     注入MySqlValidateProvider
+     *
+     * @return mySqlValidateProvider
+     * </pre>
+     */
+    @Bean
+    public MySqlValidateProvider mySqlValidateProvider() {
+        return new MySqlValidateProvider(sqlValidatorProperties);
+    }
+    
+    /**
+     * <pre>
+     *     注入OracleValidateProvider
+     *
+     * @return oracleValidateProvider
+     * </pre>
+     */
+    @Bean
+    public OracleValidateProvider oracleValidateProvider() {
+        return new OracleValidateProvider(sqlValidatorProperties);
     }
 
 }

@@ -129,6 +129,12 @@ public interface MyBatisConstPool {
             public String getLabel() {
                 return "Oracle";
             }
+        },
+        H2 {
+            @Override
+            public String getLabel() {
+                return "H2"; //仅用于测试
+            }
         }
     
     }
