@@ -49,6 +49,6 @@ public class MyBatisSqlValidateDemoApplication {
         log.info(
                 "\n    ~~~~ env.port    - {} ~~~~" +
                         "\n    ~~~~ env.profile - {} ~~~~" +
-                        "\n    ~~~~ env.name - stageloan-marketing ~~~~", env.getProperty("server.port"), profile);
+                        "\n    ~~~~ env.name - validate ~~~~", env.getProperty("server.port"), profile);
     }
 }
