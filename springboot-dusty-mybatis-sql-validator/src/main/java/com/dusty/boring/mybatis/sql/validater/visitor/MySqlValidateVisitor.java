@@ -15,25 +15,26 @@ import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlSelectQueryBlock;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlUpdateStatement;
 import com.dusty.boring.mybatis.sql.autoconfig.SqlValidatorProperties;
 import com.dusty.boring.mybatis.sql.common.pool.SqlErrorCodeEnum;
-import com.dusty.boring.mybatis.sql.common.utils.JsonUtils;
 import com.dusty.boring.mybatis.sql.validater.SqlValidateUtils;
 import com.dusty.boring.mybatis.sql.validater.provider.AbstractSqlValidateProvider;
 import com.dusty.boring.mybatis.sql.validater.provider.MySqlValidateProvider;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
+import static com.dusty.boring.mybatis.sql.autoconfig.SqlValidatorProperties.MySqlValidateItems;
 import static com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool.DbTypeEnum;
 import static com.dusty.boring.mybatis.sql.common.pool.MyBatisConstPool.SQL_COUNT_EXPRESSION;
 import static com.dusty.boring.mybatis.sql.common.pool.SqlErrorCodeEnum.*;
 import static com.dusty.boring.mybatis.sql.validater.SqlValidateResult.*;
-import static com.dusty.boring.mybatis.sql.autoconfig.SqlValidatorProperties.*;
 
 /**
  * <pre>
@@ -54,6 +55,7 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     private final List<Violation> violations       = Lists.newArrayList();
     private final Map<String, TableInfo> tables       = Maps.newHashMap();
     private final Map<String, TableR2Column> columns  = Maps.newHashMap();
+    private final Map<String, TableR2Column> orderColumns = Maps.newHashMap();
     
     
     public MySqlValidateVisitor(MySqlValidateProvider sqlValidateProvider) {
@@ -94,6 +96,11 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     @Override
     public Map<String, TableR2Column> getColumns() {
         return columns;
+    }
+    
+    @Override
+    public Map<String, TableR2Column> getOrderColumns() {
+        return orderColumns;
     }
     
     
@@ -390,11 +397,25 @@ public class MySqlValidateVisitor extends SqlValidateVisitorAdapter {
     
     @Override
     public boolean visit(SQLOrderBy sqlOrderBy) {
+        
         return true;
     }
     
     @Override
-    public boolean visit(SQLSelectOrderByItem sqlSelectOrderByItem) {
+    public boolean visit(SQLSelectOrderByItem item) {
+    
+        if (item.getExpr() instanceof SQLPropertyExpr) {
+            SQLPropertyExpr prop = (SQLPropertyExpr) item.getExpr();
+            TableR2Column tR2Col =
+                    TableR2Column
+                            .builder()
+                            .tableName(prop.getOwnernName())
+                            .tableAliasName(prop.getOwnernName())
+                            .columnName(prop.getName())
+                            .build();
+            getOrderColumns().put(prop.getName(), tR2Col);
+        }
+       
         return true;
     }
     

@@ -68,6 +68,11 @@ public class OracleValidateVisitor extends SqlValidateVisitorAdapter {
     }
     
     @Override
+    public Map<String, SqlValidateResult.TableR2Column> getOrderColumns() {
+        return null;
+    }
+    
+    @Override
     public void postVisit(SQLObject sqlObject) {
     
     }

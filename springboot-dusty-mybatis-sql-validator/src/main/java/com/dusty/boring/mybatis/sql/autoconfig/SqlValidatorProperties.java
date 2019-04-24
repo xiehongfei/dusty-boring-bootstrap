@@ -139,6 +139,9 @@ public class SqlValidatorProperties {
         
         @MetaData(value = "是否允许in子查询", note = "如：x in (select * from a) ， 默认：开启")
         private boolean enableSqlInSubQuery                              = true;
+        
+        @MetaData(value = "是否启用Order排序使用索引检查")
+        private boolean enableOrderWithIndexCheck;
     }
     
     @Getter

@@ -49,6 +49,9 @@ public interface SqlValidateVisitor extends SQLASTVisitor {
     @MetaData(value = "获取表信息")
     Map<String, TableInfo> getTables();
     
-    @MetaData(value = "获取表列信息")
+    @MetaData(value = "条件字段信息")
     Map<String, TableR2Column> getColumns();
+    
+    @MetaData(value = "排序字段信息")
+    Map<String, TableR2Column> getOrderColumns();
 }
